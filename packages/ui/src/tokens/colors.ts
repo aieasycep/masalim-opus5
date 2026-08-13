@@ -5,8 +5,45 @@
  * every screen consistent as the app grows.
  */
 
+/**
+ * The colour contract every theme satisfies.
+ *
+ * Declared as an interface with `string` values rather than inferred from one
+ * palette: literal hex types from two themes intersect to `never`, which makes
+ * `theme.colors.primary` unusable.
+ */
+export interface ThemeColors {
+  background: string;
+  foreground: string;
+  card: string;
+  cardForeground: string;
+  /** Night only: a surface raised above `card`. */
+  surface?: string;
+
+  primary: string;
+  primaryForeground: string;
+  secondary: string;
+  secondaryForeground: string;
+
+  muted: string;
+  mutedForeground: string;
+
+  accent: string;
+  accentForeground: string;
+
+  border: string;
+  ring: string;
+
+  destructive: string;
+  destructiveForeground: string;
+  success: string;
+  warning: string;
+
+  overlay: string;
+}
+
 /** Daytime palette: warm cream, soft lavender, coral accent. */
-export const lightColors = {
+export const lightColors: ThemeColors = {
   background: '#FAF8F4',
   foreground: '#2C2825',
   card: '#FFFFFF',
@@ -32,7 +69,7 @@ export const lightColors = {
   warning: '#E8A33D',
 
   overlay: 'rgba(44, 40, 37, 0.45)',
-} as const;
+};
 
 /**
  * Night palette for the audio player and generation screens.
@@ -40,7 +77,7 @@ export const lightColors = {
  * A child may be in a dark room at bedtime, so these screens are designed dark
  * first rather than dimmed versions of the light ones.
  */
-export const nightColors = {
+export const nightColors: ThemeColors = {
   background: '#0D1B2E',
   foreground: '#E8E0D4',
   card: '#162035',
@@ -67,7 +104,7 @@ export const nightColors = {
   warning: '#E8A33D',
 
   overlay: 'rgba(13, 27, 46, 0.7)',
-} as const;
+};
 
 /** Brand palette used for illustration accents, chips and decorative shapes. */
 export const palette = {
@@ -129,8 +166,5 @@ export const gradients = {
   },
 } as const;
 
-export type ColorScheme = typeof lightColors;
-export type ColorToken = keyof ColorScheme;
-
-/** Night colours are a superset; `surface` only exists there. */
-export type NightColorScheme = typeof nightColors;
+export type ColorScheme = ThemeColors;
+export type ColorToken = keyof ThemeColors;
