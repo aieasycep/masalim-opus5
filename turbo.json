@@ -1,11 +1,60 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": [".env"],
+
+  // Turborepo runs tasks in a filtered environment: anything not declared here
+  // is simply absent from the child process. Undeclared variables do not warn —
+  // they silently vanish, which showed up as Prisma reporting DATABASE_URL as
+  // missing even though it was exported. These are also the inputs that should
+  // invalidate a cached test result when they change.
   "globalEnv": [
     "NODE_ENV",
     "APP_ENV",
-    "CI"
+    "CI",
+    "LOG_LEVEL",
+
+    "DATABASE_URL",
+    "SHADOW_DATABASE_URL",
+    "TEST_DATABASE_URL",
+    "REDIS_URL",
+
+    "API_*",
+    "CORS_ORIGINS",
+    "JWT_*",
+    "STORAGE_*",
+    "SIGNED_URL_TTL_SECONDS",
+
+    "AI_PROVIDER",
+    "MODERATION_PROVIDER",
+    "MODERATION_MODEL",
+    "IMAGE_PROVIDER",
+    "IMAGE_MODEL",
+    "IMAGE_USE_REFERENCE_IMAGES",
+    "TTS_PROVIDER",
+    "VOICE_CLONE_PROVIDER",
+    "VOICE_RAW_RETENTION_DAYS",
+    "PAYMENT_PROVIDER",
+    "SUBSCRIPTION_PROVIDER",
+    "PRINT_PROVIDER",
+    "PUSH_PROVIDER",
+    "ANALYTICS_PROVIDER",
+
+    "ANTHROPIC_*",
+    "OPENAI_*",
+    "ELEVENLABS_*",
+    "IYZICO_*",
+    "REVENUECAT_*",
+    "POSTHOG_*",
+    "APPLE_*",
+    "GOOGLE_*",
+    "EXPO_*",
+    "NEXT_PUBLIC_*",
+    "ADMIN_*",
+    "SENTRY_DSN",
+
+    "MASALIM_*"
   ],
+
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
