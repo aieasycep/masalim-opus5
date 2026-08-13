@@ -28,6 +28,19 @@ export interface LocalSignatureClaims {
 }
 
 /**
+ * Narrows a provider to the local-disk driver.
+ *
+ * Checks the discriminant rather than using `instanceof`: with pnpm, a consumer
+ * can end up holding a different copy of this module, and an `instanceof` across
+ * that boundary fails silently.
+ */
+export function isLocalDiskStorage(
+  provider: StorageProvider,
+): provider is LocalDiskStorageProvider {
+  return provider.name === 'local' && 'verifySignature' in provider;
+}
+
+/**
  * Development storage driver.
  *
  * Objects live on disk, but URLs are still HMAC-signed and time-limited and the

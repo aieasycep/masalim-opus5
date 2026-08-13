@@ -32,6 +32,7 @@ apps/mobile/android/
 
 # Local disk storage driver output
 .storage/
+.storage-test/
 
 # Test output
 coverage/

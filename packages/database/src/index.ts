@@ -4,6 +4,46 @@ export * from './client';
 export * from './helpers';
 
 export { Prisma, PrismaClient, $Enums } from '@prisma/client';
+
+// Enum types, so services can annotate values without reaching into $Enums.
+export type {
+  AdminRole,
+  AgeRange,
+  AIJobStatus,
+  AIJobType,
+  AssetKind,
+  AssetVisibility,
+  AuthProvider,
+  BookPageLayout,
+  BookRenderKind,
+  BookSize,
+  BookStatus,
+  CoverType,
+  Currency,
+  DeletionRequestStatus,
+  DeletionRequestType,
+  DevicePlatform,
+  GenerationStatus,
+  HeroType,
+  IllustrationKind,
+  IllustrationStyle,
+  Locale,
+  ModerationStage,
+  ModerationStatus,
+  NarrationStatus,
+  NotificationType,
+  OrderStatus,
+  PaymentStatus,
+  StoryDuration,
+  StoryStatus,
+  SubscriptionStatus,
+  SubscriptionStore,
+  SubscriptionTier,
+  SystemVoiceCategory,
+  VoiceOwnerType,
+  VoiceProfileStatus,
+} from '@prisma/client';
+
 export type {
   Address,
   AdminUser,

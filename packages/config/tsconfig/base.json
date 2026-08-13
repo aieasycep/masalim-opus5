@@ -25,8 +25,12 @@
 
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true,
-    "incremental": true
+    "sourceMap": true
+
+    // `incremental` is deliberately off. A `tsc --noEmit` typecheck writes a
+    // build-info file claiming the outputs are current, so a later emit build
+    // silently produces nothing — and CI runs typecheck before build.
+    // Turborepo already caches task results, so this costs nothing.
   },
   "exclude": ["node_modules", "dist", "build", ".turbo"]
 }

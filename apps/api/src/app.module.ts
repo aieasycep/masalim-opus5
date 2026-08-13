@@ -1,0 +1,42 @@
+import { MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { CoreModule } from './core/core.module';
+import { AppExceptionFilter } from './core/errors/exception.filter';
+import { JwtAuthGuard } from './core/auth/jwt-auth.guard';
+import { EntitlementGuard } from './core/entitlements/entitlement.guard';
+import { LoggingInterceptor } from './core/http/logging.interceptor';
+import { IdempotencyInterceptor } from './core/idempotency/idempotency.interceptor';
+import { RequestContextMiddleware } from './core/http/request-context.middleware';
+import { QueueModule } from './core/queue/queue.module';
+import { AssetsModule } from './modules/assets/assets.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { ChildrenModule } from './modules/children/children.module';
+import { HealthModule } from './modules/health/health.module';
+import { JobsModule } from './modules/jobs/jobs.module';
+import { UsersModule } from './modules/users/users.module';
+
+@Module({
+  imports: [
+    CoreModule,
+    QueueModule,
+    AssetsModule,
+    HealthModule,
+    AuthModule,
+    UsersModule,
+    ChildrenModule,
+    JobsModule,
+  ],
+  providers: [
+    { provide: APP_FILTER, useClass: AppExceptionFilter },
+    // Authentication runs first so the entitlement guard can see the user.
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: EntitlementGuard },
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+  ],
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestContextMiddleware).forRoutes('*');
+  }
+}
