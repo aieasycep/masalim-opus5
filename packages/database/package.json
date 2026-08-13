@@ -22,7 +22,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src prisma",
     "clean": "rm -rf dist .turbo *.tsbuildinfo",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@masalim/types": "workspace:*",

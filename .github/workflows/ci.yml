@@ -56,7 +56,7 @@ jobs:
           POSTGRES_DB: masalim_test
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U masalim"
+          --health-cmd "pg_isready -U masalim -d masalim_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -107,6 +107,9 @@ jobs:
 
       - name: Apply migrations
         run: pnpm db:migrate:deploy
+
+      - name: Seed reference data
+        run: pnpm db:seed
 
       - name: Integration & e2e tests
         run: pnpm test:e2e
