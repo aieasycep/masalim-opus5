@@ -266,6 +266,12 @@ export const en: MessageCatalogue = {
     statusGenerating: 'Being written',
     statusFailed: 'Did not finish',
     statusRejected: 'Not suitable',
+    editTitleLabel: 'Story title',
+    editNotice:
+      'Editing creates a new version. Narrations you have already made and orders you have already placed are unaffected.',
+    editSaving: 'Saving…',
+    editSaved: 'Saved',
+    editSaveFailed: 'Could not save',
   },
 
   library: {

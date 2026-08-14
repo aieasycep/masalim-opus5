@@ -273,6 +273,12 @@ export const tr = {
     statusGenerating: 'Hazırlanıyor',
     statusFailed: 'Tamamlanamadı',
     statusRejected: 'Uygun bulunmadı',
+    editTitleLabel: 'Masalın adı',
+    editNotice:
+      'Düzenlemen yeni bir sürüm oluşturur. Daha önce oluşturduğun seslendirmeler ve verdiğin siparişler bundan etkilenmez.',
+    editSaving: 'Kaydediliyor…',
+    editSaved: 'Kaydedildi',
+    editSaveFailed: 'Kaydedilemedi',
   },
 
   library: {
