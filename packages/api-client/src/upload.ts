@@ -7,7 +7,6 @@ export interface UploadFileParams {
   uri: string;
   kind: AssetKind;
   contentType: string;
-  sizeBytes: number;
   onProgress?: (fraction: number) => void;
 }
 
@@ -20,20 +19,19 @@ export interface UploadFileParams {
  * re-checks its real size. A client that skipped the confirmation would leave an
  * asset the retention job later sweeps, which is the desired failure — better a
  * dangling row than a voice recording nobody knows about.
+ *
+ * The file is read *before* the signed URL is requested so the size quoted to
+ * the server is the file's actual size. Taking a caller's figure would mean
+ * every call site computing the length of a recording it just made, and a wrong
+ * guess would fail the upload at the storage layer with nothing useful to show
+ * the parent.
  */
-export async function uploadFile(
-  endpoints: Endpoints,
-  params: UploadFileParams,
-): Promise<string> {
-  const signed = await endpoints.uploads.request(
-    params.kind,
-    params.contentType,
-    params.sizeBytes,
-  );
+export async function uploadFile(endpoints: Endpoints, params: UploadFileParams): Promise<string> {
+  const body = await readLocalFile(params.uri);
+
+  const signed = await endpoints.uploads.request(params.kind, params.contentType, body.size);
 
   params.onProgress?.(0.1);
-
-  const body = await readLocalFile(params.uri);
 
   const response = await fetch(signed.uploadUrl, {
     method: 'PUT',

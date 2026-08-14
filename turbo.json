@@ -77,9 +77,11 @@
     "typecheck": {
       "dependsOn": ["^build"]
     },
+    // No `outputs`: none of these suites emit coverage, and declaring a directory
+    // that never appears makes turbo warn about missing output on every run —
+    // noise that trains you to skim past the warnings that do matter.
     "test": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "dependsOn": ["^build"]
     },
     "test:e2e": {
       "dependsOn": ["^build"],

@@ -314,6 +314,7 @@ export const tr = {
     statusReady: 'Hazır',
     statusProcessing: 'Hazırlanıyor',
     statusFailed: 'Tamamlanamadı',
+    statusDeleting: 'Siliniyor',
     menuListen: 'Sesi Dinle',
     menuRename: 'Adını Değiştir',
     menuRerecord: 'Yeniden Kaydet',
@@ -335,6 +336,11 @@ export const tr = {
     ownerNameLabel: 'Ses adı',
     ownerNameMother: 'Annemin Sesi',
     ownerNameFather: 'Babamın Sesi',
+    ownerGrandmother: 'Anneanne / Babaanne',
+    ownerGrandfather: 'Dede',
+    ownerNameGrandmother: 'Anneannemin Sesi',
+    ownerNameGrandfather: 'Dedemin Sesi',
+    ownerNameOther: 'Ailemden Bir Ses',
 
     consentTitle: 'Sesin nasıl kullanılacak?',
     consentBody:
@@ -362,6 +368,7 @@ export const tr = {
     recordFinish: 'Kaydı Bitir',
     recordRestart: 'Baştan Al',
     recordHint: 'Rahat ve normal hızda oku. Acele etmene gerek yok.',
+    recordRemaining: 'Kaydı bitirebilmen için {{count}} saniye daha okuman yeterli.',
 
     reviewTitle: 'Kaydını dinle',
     reviewBody: 'Beğendiysen sesini oluşturmaya başlayalım.',

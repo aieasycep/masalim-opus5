@@ -5,8 +5,9 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { queryKeys } from '@masalim/api-client';
+import { queryKeys, type VoiceConsentState } from '@masalim/api-client';
 import type {
+  AIJobDto,
   AddressDto,
   AppConfigDto,
   BookDto,
@@ -33,8 +34,10 @@ import type {
   AddressInput,
   CreateChildInput,
   CreateStoryInput,
+  CreateVoiceProfileInput,
   ListStoriesInput,
   PriceQuoteInput,
+  SubmitVoiceRecordingInput,
   UpdateBookInput,
   UpdateBookPageInput,
   UpdateChildInput,
@@ -261,6 +264,72 @@ export function useEnrolmentScript() {
     queryKey: queryKeys.voices.script,
     queryFn: () => api.voices.enrolmentScript(),
     staleTime: 24 * 60 * 60 * 1000,
+  });
+}
+
+export function useAcceptVoiceConsent(): UseMutationResult<VoiceConsentState, unknown, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (consentVersion: string) => api.voices.acceptConsent(consentVersion),
+    onSuccess: (state) => {
+      client.setQueryData(queryKeys.voices.consent, state);
+    },
+  });
+}
+
+export function useCreateVoice(): UseMutationResult<
+  VoiceProfileDto,
+  unknown,
+  CreateVoiceProfileInput
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateVoiceProfileInput) => api.voices.create(input),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.voices.all });
+    },
+  });
+}
+
+export function useSubmitVoiceRecording(): UseMutationResult<
+  { voice: VoiceProfileDto; job: AIJobDto },
+  unknown,
+  { id: string; input: SubmitVoiceRecordingInput }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: SubmitVoiceRecordingInput }) =>
+      api.voices.submitRecording(id, input),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.voices.all });
+    },
+  });
+}
+
+export function useRenameVoice(): UseMutationResult<
+  VoiceProfileDto,
+  unknown,
+  { id: string; displayName: string }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, displayName }: { id: string; displayName: string }) =>
+      api.voices.rename(id, { displayName }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.voices.all });
+    },
+  });
+}
+
+export function useDeleteVoice(): UseMutationResult<void, unknown, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.voices.remove(id),
+    onSuccess: () => {
+      // The narrator picker and any story that named this voice both go stale.
+      void client.invalidateQueries({ queryKey: queryKeys.voices.all });
+      void client.invalidateQueries({ queryKey: queryKeys.stories.all });
+    },
   });
 }
 

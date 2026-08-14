@@ -307,6 +307,7 @@ export const en: MessageCatalogue = {
     statusReady: 'Ready',
     statusProcessing: 'Preparing',
     statusFailed: 'Could not finish',
+    statusDeleting: 'Deleting',
     menuListen: 'Listen',
     menuRename: 'Rename',
     menuRerecord: 'Record again',
@@ -327,6 +328,11 @@ export const en: MessageCatalogue = {
     ownerNameLabel: 'Voice name',
     ownerNameMother: 'Mum’s voice',
     ownerNameFather: 'Dad’s voice',
+    ownerGrandmother: 'Grandma',
+    ownerGrandfather: 'Grandad',
+    ownerNameGrandmother: 'Grandma’s voice',
+    ownerNameGrandfather: 'Grandad’s voice',
+    ownerNameOther: 'A voice from my family',
 
     consentTitle: 'How your voice will be used',
     consentBody:
@@ -354,6 +360,7 @@ export const en: MessageCatalogue = {
     recordFinish: 'Finish recording',
     recordRestart: 'Start over',
     recordHint: 'Read at a comfortable pace. There is no rush.',
+    recordRemaining: 'Read for {{count}} more seconds and you can finish.',
 
     reviewTitle: 'Listen to your recording',
     reviewBody: 'If you are happy with it, we will create your voice.',
