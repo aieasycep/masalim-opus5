@@ -124,6 +124,16 @@ export const en: MessageCatalogue = {
     categoriesTitle: 'For tonight',
   },
 
+  /** Advanced wizard sliders, shared between humour and fantasy. */
+  level: {
+    none: 'None',
+    light: 'Light',
+    playful: 'Playful',
+    grounded: 'Grounded',
+    balanced: 'Balanced',
+    magical: 'Magical',
+  },
+
   themes: {
     adventure: 'Adventure',
     sleep: 'Bedtime',
@@ -213,6 +223,11 @@ export const en: MessageCatalogue = {
     submit: 'Create my story ✨',
     submitHint: 'This usually takes 20–40 seconds.',
     preparedFor: 'For {{name}}',
+    restoreTitle: 'You have an unfinished story',
+    restoreBody: 'Would you like to pick up where you left off?',
+    restoreDiscard: 'Start over',
+    themesLimit: 'You can choose up to {{count}} themes.',
+    noVoices: 'You have not recorded a voice yet.',
   },
 
   storyGenerating: {
@@ -248,6 +263,9 @@ export const en: MessageCatalogue = {
     readAloud: 'Read aloud',
     showText: 'Show text',
     hideText: 'Hide text',
+    statusGenerating: 'Being written',
+    statusFailed: 'Did not finish',
+    statusRejected: 'Not suitable',
   },
 
   library: {
@@ -472,6 +490,9 @@ export const en: MessageCatalogue = {
     activeUntil: 'Active until {{date}}',
     trialNote: 'Cancel any time.',
     memberBadge: 'Premium member',
+    usageStories: 'Stories created this month',
+    usageNarrations: 'Narrations created this month',
+    usageIllustrations: 'Illustrations created this month',
   },
 
   profile: {
@@ -550,6 +571,51 @@ export const en: MessageCatalogue = {
     searchBody: 'Try a different word.',
     filterTitle: 'No stories in this category yet.',
     notificationsTitle: 'No notifications yet.',
+  },
+
+  /**
+   * Field-level validation copy, keyed by the codes the shared schemas emit.
+   */
+  validation: {
+    INVALID_EMAIL: 'Enter a valid email address.',
+    PASSWORD_REQUIRED: 'Enter your password.',
+    PASSWORD_TOO_SHORT: 'Your password needs at least 10 characters.',
+    PASSWORD_TOO_LONG: 'That password is too long.',
+    PASSWORD_NEEDS_LETTER: 'Include at least one letter.',
+    PASSWORD_NEEDS_DIGIT: 'Include at least one number.',
+    NAME_REQUIRED: 'Enter a name.',
+    NAME_TOO_LONG: 'That name is a little long.',
+    NAME_INVALID_CHARACTERS: 'That name contains characters we cannot use.',
+    TERMS_NOT_ACCEPTED: 'Please accept the terms to continue.',
+    AGE_REQUIRED: 'Choose a birth date or an age range.',
+    BIRTH_DATE_OUT_OF_RANGE: 'That date does not look right.',
+    INVALID_DATE: 'Enter a valid date.',
+    THEME_REQUIRED: 'Choose at least one theme.',
+    NARRATOR_REQUIRED: 'Choose a voice.',
+    NARRATOR_AMBIGUOUS: 'You can only choose one voice at a time.',
+    TEXT_TOO_LONG: 'That text is a little long.',
+    PHONE_INVALID: 'Enter a valid phone number.',
+    POSTAL_CODE_INVALID: 'Enter a valid postcode.',
+    ADDRESS_TOO_SHORT: 'Could you add a little more detail?',
+    DISTRICT_REQUIRED: 'Enter the district.',
+    CITY_REQUIRED: 'Enter the city.',
+    AUDIO_TOO_SHORT: 'That recording is too short.',
+    AUDIO_TOO_LONG: 'That recording is too long.',
+    VOICE_CONSENT_REQUIRED: 'You need to give permission to continue.',
+    UPLOAD_TOO_LARGE: 'That file is too large.',
+    UPLOAD_TYPE_NOT_ALLOWED: 'That file type is not supported.',
+    INVALID_AMOUNT: 'That is not a valid amount.',
+    INVALID_ID: 'That record is not valid.',
+    INVALID_VERSION: 'Invalid version.',
+    TIMEZONE_INVALID: 'Choose a valid time zone.',
+  },
+
+  update: {
+    title: 'A new version is available',
+    body: 'You will need to update Masalım to continue. Your stories and voices are all still here.',
+    action: 'Update',
+    availableTitle: 'A new version is ready',
+    availableBody: 'Update whenever you like for the newest features.',
   },
 
   offline: {

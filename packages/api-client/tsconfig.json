@@ -1,0 +1,12 @@
+{
+  "extends": "@masalim/config/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM"],
+    "types": []
+  },
+  "include": ["src/**/*"]
+}

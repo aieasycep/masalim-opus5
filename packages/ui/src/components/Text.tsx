@@ -4,11 +4,12 @@ import { useTheme } from '../theme/ThemeProvider';
 import type { TextVariant } from '../tokens';
 
 export interface TextProps extends RNTextProps {
-  variant?: TextVariant;
+  variant?: TextVariant | undefined;
   /** Semantic colour role; falls back to the theme's foreground. */
-  tone?: 'default' | 'muted' | 'primary' | 'accent' | 'inverse' | 'destructive' | 'success';
-  align?: TextStyle['textAlign'];
-  children?: React.ReactNode;
+  tone?:
+    'default' | 'muted' | 'primary' | 'accent' | 'inverse' | 'destructive' | 'success' | undefined;
+  align?: TextStyle['textAlign'] | undefined;
+  children?: React.ReactNode | undefined;
 }
 
 /**

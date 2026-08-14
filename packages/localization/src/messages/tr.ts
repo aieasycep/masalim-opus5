@@ -131,6 +131,16 @@ export const tr = {
     categoriesTitle: 'Bu gece için',
   },
 
+  /** Advanced wizard sliders, shared between humour and fantasy. */
+  level: {
+    none: 'Yok',
+    light: 'Hafif',
+    playful: 'Neşeli',
+    grounded: 'Gerçekçi',
+    balanced: 'Dengeli',
+    magical: 'Büyülü',
+  },
+
   themes: {
     adventure: 'Macera',
     sleep: 'Uyku',
@@ -220,6 +230,11 @@ export const tr = {
     submit: 'Masalımı Oluştur ✨',
     submitHint: 'Yaklaşık 20–40 saniye sürebilir.',
     preparedFor: '{{name}} için',
+    restoreTitle: 'Yarım kalan bir masalın var',
+    restoreBody: 'Kaldığın yerden devam etmek ister misin?',
+    restoreDiscard: 'Baştan başla',
+    themesLimit: 'En fazla {{count}} tema seçebilirsin.',
+    noVoices: 'Henüz kayıtlı bir sesin yok.',
   },
 
   storyGenerating: {
@@ -255,6 +270,9 @@ export const tr = {
     readAloud: 'Sesli Oku',
     showText: 'Metni göster',
     hideText: 'Metni gizle',
+    statusGenerating: 'Hazırlanıyor',
+    statusFailed: 'Tamamlanamadı',
+    statusRejected: 'Uygun bulunmadı',
   },
 
   library: {
@@ -480,6 +498,9 @@ export const tr = {
     activeUntil: '{{date}} tarihine kadar aktif',
     trialNote: 'İstediğin zaman iptal edebilirsin.',
     memberBadge: 'Premium Üye',
+    usageStories: 'Bu ay oluşturulan masallar',
+    usageNarrations: 'Bu ay oluşturulan seslendirmeler',
+    usageIllustrations: 'Bu ay oluşturulan görseller',
   },
 
   profile: {
@@ -558,6 +579,54 @@ export const tr = {
     searchBody: 'Farklı bir kelimeyle aramayı deneyebilirsin.',
     filterTitle: 'Bu kategoride henüz hikâye yok.',
     notificationsTitle: 'Henüz bildirimin yok.',
+  },
+
+  /**
+   * Field-level validation copy.
+   *
+   * Keyed by the codes the shared Zod schemas emit, so the app and the API agree
+   * on what is wrong and only the wording lives here.
+   */
+  validation: {
+    INVALID_EMAIL: 'Geçerli bir e-posta adresi gir.',
+    PASSWORD_REQUIRED: 'Şifreni gir.',
+    PASSWORD_TOO_SHORT: 'Şifren en az 10 karakter olmalı.',
+    PASSWORD_TOO_LONG: 'Şifren çok uzun.',
+    PASSWORD_NEEDS_LETTER: 'Şifrende en az bir harf olmalı.',
+    PASSWORD_NEEDS_DIGIT: 'Şifrende en az bir rakam olmalı.',
+    NAME_REQUIRED: 'Bir ad yaz.',
+    NAME_TOO_LONG: 'Bu ad biraz uzun.',
+    NAME_INVALID_CHARACTERS: 'Adda kullanılamayan karakterler var.',
+    TERMS_NOT_ACCEPTED: 'Devam etmek için koşulları kabul etmen gerekiyor.',
+    AGE_REQUIRED: 'Doğum tarihi ya da yaş aralığı seç.',
+    BIRTH_DATE_OUT_OF_RANGE: 'Bu tarih doğru görünmüyor.',
+    INVALID_DATE: 'Geçerli bir tarih gir.',
+    THEME_REQUIRED: 'En az bir tema seç.',
+    NARRATOR_REQUIRED: 'Bir ses seç.',
+    NARRATOR_AMBIGUOUS: 'Aynı anda tek bir ses seçebilirsin.',
+    TEXT_TOO_LONG: 'Bu metin biraz uzun.',
+    PHONE_INVALID: 'Geçerli bir telefon numarası gir.',
+    POSTAL_CODE_INVALID: 'Geçerli bir posta kodu gir.',
+    ADDRESS_TOO_SHORT: 'Adresi biraz daha ayrıntılı yazar mısın?',
+    DISTRICT_REQUIRED: 'İlçeyi yaz.',
+    CITY_REQUIRED: 'İli yaz.',
+    AUDIO_TOO_SHORT: 'Kayıt çok kısa.',
+    AUDIO_TOO_LONG: 'Kayıt çok uzun.',
+    VOICE_CONSENT_REQUIRED: 'Devam etmek için izin vermen gerekiyor.',
+    UPLOAD_TOO_LARGE: 'Bu dosya çok büyük.',
+    UPLOAD_TYPE_NOT_ALLOWED: 'Bu dosya türü desteklenmiyor.',
+    INVALID_AMOUNT: 'Geçerli bir tutar değil.',
+    INVALID_ID: 'Geçersiz bir kayıt.',
+    INVALID_VERSION: 'Geçersiz sürüm.',
+    TIMEZONE_INVALID: 'Geçerli bir saat dilimi seç.',
+  },
+
+  update: {
+    title: 'Yeni bir sürüm var',
+    body: 'Devam edebilmen için Masalım\'ı güncellemen gerekiyor. Masalların ve seslerin yerinde duruyor.',
+    action: 'Güncelle',
+    availableTitle: 'Yeni sürüm hazır',
+    availableBody: 'Yeni özellikler için güncelleyebilirsin.',
   },
 
   offline: {

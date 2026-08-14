@@ -17,14 +17,14 @@ export type ButtonSize = 'large' | 'medium' | 'small';
 
 export interface ButtonProps extends Omit<PressableProps, 'style' | 'children'> {
   label: string;
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  loading?: boolean;
-  fullWidth?: boolean;
+  variant?: ButtonVariant | undefined;
+  size?: ButtonSize | undefined;
+  loading?: boolean | undefined;
+  fullWidth?: boolean | undefined;
   /** Rendered before the label, e.g. a play triangle on "Dinlemeye Başla". */
-  leadingIcon?: React.ReactNode;
-  trailingIcon?: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
+  leadingIcon?: React.ReactNode | undefined;
+  trailingIcon?: React.ReactNode | undefined;
+  style?: StyleProp<ViewStyle> | undefined;
 }
 
 const HEIGHTS: Record<ButtonSize, number> = {
