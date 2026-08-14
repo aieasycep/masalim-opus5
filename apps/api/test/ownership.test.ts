@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   authHeader,
   createTestApp,
-  resetRateLimits,
+  resetRedis,
   resetUserData,
   signUp,
   type SignedUpUser,
@@ -32,7 +32,7 @@ describe('data ownership', () => {
 
   beforeEach(async () => {
     await resetUserData(context.prisma);
-    await resetRateLimits(context.redis);
+    await resetRedis(context.redis);
     owner = await signUp(context, { name: 'Ayşe' });
     stranger = await signUp(context, { name: 'Mehmet' });
 

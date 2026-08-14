@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   authHeader,
   createTestApp,
-  resetRateLimits,
+  resetRedis,
   resetUserData,
   signUp,
   uniqueEmail,
@@ -23,7 +23,7 @@ describe('authentication', () => {
 
   beforeEach(async () => {
     await resetUserData(context.prisma);
-    await resetRateLimits(context.redis);
+    await resetRedis(context.redis);
   });
 
   describe('protected routes', () => {

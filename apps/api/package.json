@@ -15,6 +15,7 @@
     "clean": "rm -rf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
+    "@masalim/ai": "workspace:*",
     "@masalim/database": "workspace:*",
     "@masalim/localization": "workspace:*",
     "@masalim/storage": "workspace:*",

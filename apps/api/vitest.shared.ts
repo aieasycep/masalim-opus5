@@ -6,8 +6,12 @@ import type { UserConfig } from 'vitest/config';
 loadEnv({ path: path.resolve(__dirname, '../../.env') });
 
 /**
- * Tests always run against a throwaway database and storage directory, so a
- * failing run can never touch development data.
+ * Tests always run against a throwaway database, Redis database and storage
+ * directory, so a failing run can never touch development data.
+ *
+ * Redis logical database 1 is reserved for tests: the suite empties it between
+ * cases to clear queued jobs and rate-limit counters, and doing that to the
+ * developer's running app would be rude at best.
  */
 export function applyTestEnvironment(): void {
   process.env.NODE_ENV = 'test';
@@ -15,6 +19,7 @@ export function applyTestEnvironment(): void {
   process.env.DATABASE_URL =
     process.env.TEST_DATABASE_URL ??
     'postgresql://masalim:masalim@localhost:5432/masalim_test?schema=public';
+  process.env.REDIS_URL = process.env.TEST_REDIS_URL ?? 'redis://localhost:6379/1';
   process.env.STORAGE_PROVIDER = 'local';
   process.env.STORAGE_LOCAL_DIR = '.storage-test';
 }

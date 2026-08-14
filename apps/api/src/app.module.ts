@@ -8,22 +8,28 @@ import { LoggingInterceptor } from './core/http/logging.interceptor';
 import { IdempotencyInterceptor } from './core/idempotency/idempotency.interceptor';
 import { RequestContextMiddleware } from './core/http/request-context.middleware';
 import { QueueModule } from './core/queue/queue.module';
+import { AiModule } from './core/ai/ai.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ChildrenModule } from './modules/children/children.module';
 import { HealthModule } from './modules/health/health.module';
 import { JobsModule } from './modules/jobs/jobs.module';
+import { ModerationModule } from './modules/moderation/moderation.module';
+import { StoriesModule } from './modules/stories/stories.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
     CoreModule,
     QueueModule,
+    AiModule,
     AssetsModule,
+    ModerationModule,
     HealthModule,
     AuthModule,
     UsersModule,
     ChildrenModule,
+    StoriesModule,
     JobsModule,
   ],
   providers: [

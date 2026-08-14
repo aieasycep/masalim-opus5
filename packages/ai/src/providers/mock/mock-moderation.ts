@@ -12,24 +12,62 @@ import type {
  * be exercised without a provider, not to be a real classifier. Production uses
  * the moderation API plus an LLM safety pass; this list only has to make the
  * rejection path reachable in tests and local development.
+ *
+ * Two things the obvious `\b(term)\b` spelling gets wrong for Turkish, both of
+ * which make the deny-list look like it works while never firing:
+ *
+ * - A trailing `\b` misses every inflected form, and Turkish is agglutinative:
+ *   a parent writes "öldürsün", "silahlarla", "uyuşturucuyu", never the bare
+ *   stem. So the patterns anchor at the start of a word only.
+ * - `\b` itself is defined over ASCII word characters, so it does not match
+ *   before "öldür" or "ırkçı" — the boundary between a space and "ö" is not a
+ *   boundary as far as `\b` is concerned. A Unicode-aware lookbehind is used
+ *   instead.
  */
+const WORD_START = String.raw`(?<![\p{L}\p{N}])`;
+
+function blocked(terms: string[]): RegExp {
+  return new RegExp(`${WORD_START}(${terms.join('|')})`, 'iu');
+}
+
 const BLOCKED_PATTERNS: Array<{ pattern: RegExp; category: string }> = [
-  { pattern: /\b(seks|cinsel|porno|çıplak|sex|porn|nude)\b/i, category: 'sexual' },
   {
-    pattern: /\b(öldür|katlet|kan\s?revan|işkence|cinayet|kill|murder|torture)\b/i,
+    pattern: blocked(['seks', 'cinsel', 'porno', 'çıplak', 'sex', 'porn', 'nude']),
+    category: 'sexual',
+  },
+  {
+    pattern: blocked([
+      'öldür',
+      'katlet',
+      String.raw`kan\s?revan`,
+      'işkence',
+      'cinayet',
+      'bıçakla',
+      'kill',
+      'murder',
+      'torture',
+    ]),
     category: 'violence',
   },
   {
-    pattern: /\b(intihar|kendine\s?zarar|suicide|self[-\s]?harm)\b/i,
+    pattern: blocked([
+      'intihar',
+      String.raw`kendine\s?zarar`,
+      'suicide',
+      String.raw`self[-\s]?harm`,
+    ]),
     category: 'self_harm',
   },
   {
-    pattern: /\b(uyuşturucu|esrar|kokain|eroin|drugs|cocaine|heroin)\b/i,
+    pattern: blocked(['uyuşturucu', 'esrar', 'kokain', 'eroin', 'drugs', 'cocaine', 'heroin']),
     category: 'drugs',
   },
-  { pattern: /\b(silah|tabanca|bomba|gun|pistol|bomb)\b/i, category: 'weapons' },
   {
-    pattern: /\b(nefret|ırkçı|aşağıla|hate\s?speech|racist)\b/i,
+    pattern: blocked(['silah', 'tabanca', 'bomba', 'gun', 'pistol', 'bomb']),
+    category: 'weapons',
+  },
+  {
+    pattern: blocked(['nefret', 'ırkçı', 'aşağıla', String.raw`hate\s?speech`, 'racist']),
     category: 'hate',
   },
 ];

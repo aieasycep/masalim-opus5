@@ -1,18 +1,16 @@
 import {
-  Inject,
   Injectable,
-  Optional,
+  type OnApplicationBootstrap,
   type OnModuleDestroy,
-  type OnModuleInit,
 } from '@nestjs/common';
-import { Worker, type Job } from 'bullmq';
+import { UnrecoverableError, Worker, type Job } from 'bullmq';
 import { ERROR_CODES } from '@masalim/types';
 import { RedisService } from '../redis/redis.service';
 import { AppLogger } from '../logger/logger.service';
-import { AppError } from '../errors/app-error';
+import { AppError, statusForErrorCode } from '../errors/app-error';
 import { JobProgressService } from './job-progress.service';
+import { JobProcessorRegistry } from './job-processor.registry';
 import {
-  JOB_PROCESSOR,
   QUEUE_NAMES,
   type JobPayload,
   type JobProcessor,
@@ -27,26 +25,24 @@ import {
  * answer a parent opening the Library.
  */
 @Injectable()
-export class WorkerHostService implements OnModuleInit, OnModuleDestroy {
+export class WorkerHostService implements OnApplicationBootstrap, OnModuleDestroy {
   private readonly workers: Worker[] = [];
 
   constructor(
     private readonly redis: RedisService,
     private readonly progress: JobProgressService,
+    private readonly registry: JobProcessorRegistry,
     private readonly logger: AppLogger,
-    @Optional()
-    @Inject(JOB_PROCESSOR)
-    private readonly processors: JobProcessor[] = [],
   ) {}
 
-  onModuleInit(): void {
+  onApplicationBootstrap(): void {
     if (process.env.MASALIM_ROLE !== 'worker') return;
     this.start();
   }
 
   /** Exposed so integration tests can run processors in-process. */
   start(): void {
-    for (const processor of this.processors) {
+    for (const processor of this.registry.all()) {
       const queueName = QUEUE_NAMES[processor.type];
       const worker = new Worker(
         queueName,
@@ -69,7 +65,7 @@ export class WorkerHostService implements OnModuleInit, OnModuleDestroy {
       this.logger.pino.info({ queue: queueName }, 'worker listening');
     }
 
-    if (this.processors.length === 0) {
+    if (this.workers.length === 0) {
       this.logger.pino.warn('no job processors registered');
     }
   }
@@ -91,13 +87,19 @@ export class WorkerHostService implements OnModuleInit, OnModuleDestroy {
       log.info('job completed');
     } catch (error) {
       const isFinalAttempt = (job.attemptsMade ?? 0) + 1 >= (job.opts.attempts ?? 1);
-      const code =
-        error instanceof AppError ? error.code : ERROR_CODES.INTERNAL_ERROR;
+      const code = error instanceof AppError ? error.code : ERROR_CODES.INTERNAL_ERROR;
 
-      // Only record a terminal failure on the last attempt; otherwise the row
+      // A 4xx-class domain error is a verdict, not a hiccup: an unsuitable
+      // prompt or a missing story will fail identically on every retry. Retrying
+      // would burn three provider calls and leave a parent watching a progress
+      // bar for half a minute before the same message appears.
+      const retryable =
+        !(error instanceof AppError) || statusForErrorCode(code) >= 500;
+
+      // Otherwise the failure is only recorded on the last attempt; the row
       // would flash FAILED between retries and the app would tell the parent
       // their story was lost while it is still being written.
-      if (isFinalAttempt) {
+      if (!retryable || isFinalAttempt) {
         await this.progress.markFailed(
           jobId,
           code,
@@ -105,7 +107,13 @@ export class WorkerHostService implements OnModuleInit, OnModuleDestroy {
         );
       }
 
-      log.warn({ err: error, isFinalAttempt }, 'job attempt failed');
+      log.warn({ err: error, isFinalAttempt, retryable }, 'job attempt failed');
+
+      if (!retryable) {
+        throw new UnrecoverableError(
+          error instanceof Error ? error.message : String(error),
+        );
+      }
       throw error;
     }
   }

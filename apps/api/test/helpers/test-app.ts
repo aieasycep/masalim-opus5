@@ -69,33 +69,44 @@ export async function createTestApp(): Promise<TestContext> {
 }
 
 /**
- * Rate-limit counters live in Redis and outlive a database truncate, so they are
- * cleared between tests. Every request in the suite comes from 127.0.0.1 and
- * would otherwise trip the per-IP limits.
+ * Empties the test Redis database between cases.
+ *
+ * Two kinds of state outlive a database reset and would otherwise leak across
+ * tests: rate-limit counters (every request in the suite comes from 127.0.0.1
+ * and would trip the per-IP limits) and queued BullMQ jobs (a job left over from
+ * an earlier case would run against rows that no longer exist). `applyTestEnvironment`
+ * pins the suite to its own Redis database, so flushing is safe.
  */
-export async function resetRateLimits(redis: RedisService): Promise<void> {
-  const keys = await redis.client.keys('ratelimit:*');
-  if (keys.length > 0) {
-    await redis.client.del(...keys);
-  }
+export async function resetRedis(redis: RedisService): Promise<void> {
+  await redis.client.flushdb();
 }
 
 /**
  * Clears user-owned data between tests while leaving reference data (interests,
  * system voices, print catalogue) in place — those are seeded configuration, not
  * fixtures.
+ *
+ * `DELETE`, not `TRUNCATE … CASCADE`. `TRUNCATE` follows foreign keys but
+ * *ignores* their referential actions, so truncating `assets` also emptied
+ * `system_voices` — whose `previewAssetId` is `ON DELETE SET NULL` and should
+ * merely have been nulled. `DELETE` honours the declared actions, which is what
+ * the schema means. Orders go first because `orders.bookId` is `RESTRICT` and
+ * the cascade from `users` reaches books and orders in an unspecified order.
  */
 export async function resetUserData(prisma: PrismaService): Promise<void> {
-  await prisma.raw.$executeRawUnsafe(`
-    TRUNCATE TABLE
-      users,
-      assets,
-      ai_jobs,
-      idempotency_records,
-      moderation_records,
-      deletion_requests
-    RESTART IDENTITY CASCADE
-  `);
+  const tables = [
+    'orders',
+    'users',
+    'assets',
+    'ai_jobs',
+    'idempotency_records',
+    'moderation_records',
+    'deletion_requests',
+  ];
+
+  await prisma.raw.$transaction(
+    tables.map((table) => prisma.raw.$executeRawUnsafe(`DELETE FROM ${table}`)),
+  );
 }
 
 let emailCounter = 0;

@@ -23,6 +23,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@masalim/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@masalim/database':
         specifier: workspace:*
         version: link:../../packages/database

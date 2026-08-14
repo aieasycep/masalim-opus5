@@ -28,9 +28,6 @@ export const DEFAULT_JOB_OPTIONS = {
 /** Redis pub/sub channel carrying live job progress to SSE subscribers. */
 export const JOB_PROGRESS_CHANNEL = 'masalim:job-progress';
 
-/** DI token for the processors a feature module contributes. */
-export const JOB_PROCESSOR = Symbol('JOB_PROCESSOR');
-
 export interface JobPayload {
   jobId: string;
   userId: string;
