@@ -9,6 +9,7 @@ import { AppError } from '../../core/errors/app-error';
 import { AppLogger } from '../../core/logger/logger.service';
 import { Clock } from '../../core/time/clock';
 import { AssetsService } from '../assets/assets.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { JobStepReporter } from '../../core/queue/queue.constants';
 
 /** The sentence the parent hears played back in their own voice. */
@@ -30,6 +31,7 @@ export class VoiceCloneService {
     @Inject(TTS_PROVIDER) private readonly tts: TextToSpeechProvider,
     private readonly prisma: PrismaService,
     private readonly assets: AssetsService,
+    private readonly notifications: NotificationsService,
     private readonly usage: AiUsageTracker,
     private readonly config: AppConfigService,
     private readonly clock: Clock,
@@ -152,6 +154,15 @@ export class VoiceCloneService {
         // without reading the sixty-second text again (§46).
         rawRetentionUntil: this.clock.plusSeconds(retentionDays * 24 * 60 * 60),
       },
+    });
+
+    await this.notifications.notify({
+      userId: params.userId,
+      type: 'VOICE_READY',
+      titleKey: 'notification.voiceReady.title',
+      bodyKey: 'notification.voiceReady.body',
+      values: { name: profile.displayName },
+      link: { host: 'voice', id: profile.id },
     });
 
     log.info({ hasPreview: previewAssetId !== null }, 'voice cloned');

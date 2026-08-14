@@ -13,6 +13,7 @@ import { AppError } from '../../core/errors/app-error';
 import { AppLogger } from '../../core/logger/logger.service';
 import { Clock } from '../../core/time/clock';
 import { AssetsService } from '../assets/assets.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { JobStepReporter } from '../../core/queue/queue.constants';
 
 export interface RenderSetParams {
@@ -33,6 +34,7 @@ export class IllustrationRenderService {
     @Inject(IMAGE_PROVIDER) private readonly images: ImageGenerationProvider,
     private readonly prisma: PrismaService,
     private readonly assets: AssetsService,
+    private readonly notifications: NotificationsService,
     private readonly usage: AiUsageTracker,
     private readonly clock: Clock,
     private readonly logger: AppLogger,
@@ -151,6 +153,17 @@ export class IllustrationRenderService {
       where: { id: set.id },
       data: { status: succeeded > 0 ? 'READY' : 'FAILED' },
     });
+
+    if (succeeded > 0) {
+      await this.notifications.notify({
+        userId: params.userId,
+        type: 'ILLUSTRATIONS_READY',
+        titleKey: 'notification.illustrationsReady.title',
+        bodyKey: 'notification.illustrationsReady.body',
+        values: { title: set.story.title, count: String(succeeded) },
+        link: { host: 'story', id: set.storyId },
+      });
+    }
 
     log.info({ succeeded, failures }, 'illustration set rendered');
 

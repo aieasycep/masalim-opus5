@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { DEVICE_PLATFORMS } from '@masalim/types';
 import {
   emailSchema,
   localeSchema,
@@ -63,11 +62,3 @@ export const changePasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
-
-export const registerDeviceSchema = z.object({
-  token: z.string().min(10).max(512),
-  platform: z.enum(DEVICE_PLATFORMS),
-  appVersion: z.string().max(32).optional(),
-  locale: localeSchema.optional(),
-});
-export type RegisterDeviceInput = z.infer<typeof registerDeviceSchema>;

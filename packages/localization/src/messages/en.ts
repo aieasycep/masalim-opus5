@@ -591,11 +591,14 @@ export const en: MessageCatalogue = {
       analysing: 'Reviewing the recording',
       cloning: 'Creating your voice',
       preview: 'Preparing a sample',
+      finishing: 'Saving your voice',
     },
     narration: {
       queued: 'Queued',
       synthesising: 'Narrating the story',
       assembling: 'Putting the audio together',
+      preparing: 'Preparing the text',
+      saving: 'Saving the audio',
     },
     illustration: {
       queued: 'Queued',
@@ -603,7 +606,12 @@ export const en: MessageCatalogue = {
       cover: 'Drawing the cover',
       page: 'Drawing page {{current}} of {{total}}',
     },
-    book: { queued: 'Queued', rendering: 'Preparing the book' },
+    book: {
+      queued: 'Queued',
+      rendering: 'Preparing the book',
+      gathering: 'Gathering the illustrations',
+      saving: 'Saving your book',
+    },
     print: { queued: 'Queued', rendering: 'Preparing the print file' },
   },
 

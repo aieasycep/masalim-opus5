@@ -1,6 +1,7 @@
 export * from './auth';
 export * from './books';
 export * from './children';
+export * from './notifications';
 export * from './orders';
 export * from './primitives';
 export * from './stories';

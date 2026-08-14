@@ -10,7 +10,9 @@ import { RequestContextMiddleware } from './core/http/request-context.middleware
 import { QueueModule } from './core/queue/queue.module';
 import { AiModule } from './core/ai/ai.module';
 import { CommerceModule } from './core/commerce/commerce.module';
+import { PushModule } from './core/notifications/push.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
+import { AppConfigFeatureModule } from './modules/app-config/app-config.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BooksModule } from './modules/books/books.module';
@@ -20,6 +22,7 @@ import { IllustrationsModule } from './modules/illustrations/illustrations.modul
 import { JobsModule } from './modules/jobs/jobs.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { NarrationModule } from './modules/narration/narration.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { StoriesModule } from './modules/stories/stories.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
@@ -32,7 +35,9 @@ import { VoicesModule } from './modules/voices/voices.module';
     QueueModule,
     AiModule,
     CommerceModule,
+    PushModule,
     AssetsModule,
+    NotificationsModule,
     ModerationModule,
     HealthModule,
     AuthModule,
@@ -46,6 +51,7 @@ import { VoicesModule } from './modules/voices/voices.module';
     SubscriptionsModule,
     AddressesModule,
     OrdersModule,
+    AppConfigFeatureModule,
     JobsModule,
   ],
   providers: [

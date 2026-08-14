@@ -14,6 +14,7 @@ import { AppError } from '../../core/errors/app-error';
 import { AppLogger } from '../../core/logger/logger.service';
 import { Clock } from '../../core/time/clock';
 import { ModerationService } from '../moderation/moderation.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { JobStepReporter } from '../../core/queue/queue.constants';
 
 /** One repair attempt: a second schema failure means something is genuinely wrong. */
@@ -41,6 +42,7 @@ export class StoryGenerationService {
     @Inject(STORY_PROVIDER) private readonly provider: StoryGenerationProvider,
     private readonly prisma: PrismaService,
     private readonly moderation: ModerationService,
+    private readonly notifications: NotificationsService,
     private readonly usage: AiUsageTracker,
     private readonly clock: Clock,
     private readonly logger: AppLogger,
@@ -174,6 +176,15 @@ export class StoryGenerationService {
         },
         update: {},
       });
+    });
+
+    await this.notifications.notify({
+      userId: params.userId,
+      type: 'STORY_READY',
+      titleKey: 'notification.storyReady.title',
+      bodyKey: 'notification.storyReady.body',
+      values: { title: generated.title },
+      link: { host: 'story', id: story.id },
     });
 
     log.info({ pages: generated.pages.length }, 'story generated');

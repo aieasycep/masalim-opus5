@@ -8,6 +8,7 @@ import { PolicyService } from '../../core/policy/policy.service';
 import { AppError } from '../../core/errors/app-error';
 import { AppLogger } from '../../core/logger/logger.service';
 import { AssetsService } from '../assets/assets.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { OrdersService } from './orders.service';
 
 interface AddressSnapshot {
@@ -30,6 +31,7 @@ export class PaymentsService {
     private readonly policy: PolicyService,
     private readonly orders: OrdersService,
     private readonly assets: AssetsService,
+    private readonly notifications: NotificationsService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -204,6 +206,15 @@ export class PaymentsService {
       await tx.orderEvent.create({
         data: { orderId: order.id, type: 'PAYMENT_SUCCEEDED', payload: {} },
       });
+    });
+
+    await this.notifications.notify({
+      userId,
+      type: 'ORDER_CONFIRMED',
+      titleKey: 'notification.orderConfirmed.title',
+      bodyKey: 'notification.orderConfirmed.body',
+      values: { orderNumber: order.orderNumber },
+      link: { host: 'order', id: order.id },
     });
 
     this.logger

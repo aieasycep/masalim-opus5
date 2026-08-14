@@ -5,7 +5,11 @@ import { ERROR_CODES } from '@masalim/types';
 import { AppError } from '../errors/app-error';
 import { PrismaService } from '../prisma/prisma.service';
 import { TokenService } from './jwt.service';
-import { IS_PUBLIC_KEY, type AuthenticatedUser } from './auth.decorators';
+import {
+  IS_PUBLIC_KEY,
+  OPTIONAL_AUTH_KEY,
+  type AuthenticatedUser,
+} from './auth.decorators';
 
 interface RequestWithUser extends Request {
   user?: AuthenticatedUser;
@@ -34,13 +38,25 @@ export class JwtAuthGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
+    const isOptional = this.reflector.getAllAndOverride<boolean>(OPTIONAL_AUTH_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const token = this.extractToken(request);
     if (!token) {
+      if (isOptional) return true;
       throw new AppError(ERROR_CODES.UNAUTHORIZED, 'Missing bearer token');
     }
 
-    const payload = await this.tokens.verifyAccessToken(token);
+    // On an optional route a stale token means "not signed in", not an error:
+    // an expired session must not stop the app finding out it needs updating.
+    const payload = await this.tokens.verifyAccessToken(token).catch((error: unknown) => {
+      if (isOptional) return null;
+      throw error;
+    });
+    if (!payload) return true;
 
     // A token stays cryptographically valid after the account is deleted, so
     // liveness is confirmed against the database on every request.
@@ -50,6 +66,7 @@ export class JwtAuthGuard implements CanActivate {
     });
 
     if (!user || user.deletedAt) {
+      if (isOptional) return true;
       throw new AppError(ERROR_CODES.ACCOUNT_DELETED, 'Account no longer exists');
     }
 

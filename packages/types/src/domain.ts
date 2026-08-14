@@ -31,6 +31,7 @@ import type {
   VoiceProfileStatus,
 } from './enums';
 import type { StoryAdvancedSettings } from './story-rules';
+import type { FeatureFlagKey } from './feature-flags';
 
 /** Every timestamp crossing the API boundary is an ISO-8601 string. */
 export type IsoDateTime = string;
@@ -427,6 +428,45 @@ export interface NotificationDto {
   data: Record<string, string>;
   readAt: IsoDateTime | null;
   createdAt: IsoDateTime;
+}
+
+// --------------------------------------------------------- App config
+
+export interface AppUpdatePolicyDto {
+  minSupportedVersion: string;
+  latestVersion: string;
+  /** The running build is below the supported floor and must be updated. */
+  updateRequired: boolean;
+  /** A newer build exists; the app may mention it, gently. */
+  updateAvailable: boolean;
+  messageKey: string | null;
+}
+
+export interface AppConfigDto {
+  features: Record<FeatureFlagKey, boolean>;
+  update: AppUpdatePolicyDto | null;
+}
+
+// --------------------------------------------------------------- Home
+
+/** Where a listener left off, so Home can offer "Kaldığın yerden devam et". */
+export interface ContinueListeningDto {
+  story: StorySummaryDto;
+  narrationId: string;
+  positionSeconds: number;
+  durationSeconds: number | null;
+}
+
+export interface HomeDto {
+  greetingKey: string;
+  children: ChildDto[];
+  continueListening: ContinueListeningDto | null;
+  recentStories: StorySummaryDto[];
+  favourites: StorySummaryDto[];
+  /** Non-null only when something is currently being generated. */
+  activeJob: AIJobDto | null;
+  storiesThisMonth: number;
+  storyLimit: number;
 }
 
 // ------------------------------------------------------------- Assets

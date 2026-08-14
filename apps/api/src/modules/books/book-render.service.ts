@@ -11,6 +11,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { AppError } from '../../core/errors/app-error';
 import { AppLogger } from '../../core/logger/logger.service';
 import { AssetsService } from '../assets/assets.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { JobStepReporter } from '../../core/queue/queue.constants';
 
 export interface RenderBookParams {
@@ -30,6 +31,7 @@ export class BookRenderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly assets: AssetsService,
+    private readonly notifications: NotificationsService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -131,6 +133,17 @@ export class BookRenderService {
         await this.prisma.client.book.update({
           where: { id: book.id },
           data: { status: 'READY' },
+        });
+      }
+
+      if (!isPrint) {
+        await this.notifications.notify({
+          userId: params.userId,
+          type: 'BOOK_READY',
+          titleKey: 'notification.bookReady.title',
+          bodyKey: 'notification.bookReady.body',
+          values: { title: book.title },
+          link: { host: 'book', id: book.id },
         });
       }
 

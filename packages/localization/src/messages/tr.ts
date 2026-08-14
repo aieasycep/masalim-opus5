@@ -602,11 +602,14 @@ export const tr = {
       analysing: 'Kayıt inceleniyor',
       cloning: 'Sesin hazırlanıyor',
       preview: 'Örnek hazırlanıyor',
+      finishing: 'Sesin kaydediliyor',
     },
     narration: {
       queued: 'Sıraya alındı',
       synthesising: 'Masal seslendiriliyor',
       assembling: 'Ses birleştiriliyor',
+      preparing: 'Metin hazırlanıyor',
+      saving: 'Ses kaydediliyor',
     },
     illustration: {
       queued: 'Sıraya alındı',
@@ -617,6 +620,8 @@ export const tr = {
     book: {
       queued: 'Sıraya alındı',
       rendering: 'Kitap hazırlanıyor',
+      gathering: 'Görseller toplanıyor',
+      saving: 'Kitabın kaydediliyor',
     },
     print: {
       queued: 'Sıraya alındı',

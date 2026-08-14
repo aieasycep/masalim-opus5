@@ -3,10 +3,20 @@ import type { EntitlementKey } from '@masalim/types';
 import type { Request } from 'express';
 
 export const IS_PUBLIC_KEY = 'masalim:isPublic';
+export const OPTIONAL_AUTH_KEY = 'masalim:optionalAuth';
 export const REQUIRED_ENTITLEMENT_KEY = 'masalim:requiredEntitlement';
 
 /** Opt an endpoint out of authentication. Everything else requires a token. */
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+
+/**
+ * Attach the caller when they have a valid token, but do not demand one.
+ *
+ * For endpoints the app needs *before* sign-in and again after — the launch
+ * config, where a build below the supported floor has to be told so on the
+ * splash screen rather than after the parent has typed their password.
+ */
+export const OptionalAuth = () => SetMetadata(OPTIONAL_AUTH_KEY, true);
 
 /**
  * Gate an endpoint behind a boolean entitlement.
@@ -36,8 +46,13 @@ export const CurrentUser = createParamDecorator(
   },
 );
 
-/** Shorthand for the very common `@CurrentUser('id')`. */
+/**
+ * Shorthand for the very common `@CurrentUser('id')`.
+ *
+ * Null rather than undefined on an `@OptionalAuth()` route, so a handler that
+ * genuinely accepts an anonymous caller says so in its signature.
+ */
 export const CurrentUserId = createParamDecorator((_data: unknown, ctx: ExecutionContext) => {
   const request = ctx.switchToHttp().getRequest<RequestWithUser>();
-  return request.user?.id;
+  return request.user?.id ?? null;
 });
