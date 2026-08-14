@@ -17,6 +17,7 @@
   "dependencies": {
     "@masalim/ai": "workspace:*",
     "@masalim/audio": "workspace:*",
+    "@masalim/book-render": "workspace:*",
     "@masalim/database": "workspace:*",
     "@masalim/localization": "workspace:*",
     "@masalim/storage": "workspace:*",

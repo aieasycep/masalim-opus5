@@ -52,6 +52,8 @@
     "NEXT_PUBLIC_*",
     "ADMIN_*",
     "SENTRY_DSN",
+    "CHROMIUM_EXECUTABLE_PATH",
+    "PLAYWRIGHT_BROWSERS_PATH",
 
     "MASALIM_*"
   ],

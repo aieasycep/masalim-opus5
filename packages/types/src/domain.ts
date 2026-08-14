@@ -4,6 +4,7 @@ import type {
   AIJobType,
   AssetKind,
   BookPageLayout,
+  BookRenderKind,
   BookSize,
   BookStatus,
   CoverType,
@@ -214,6 +215,8 @@ export interface IllustrationDto {
   variantIndex: number;
   isSelected: boolean;
   status: GenerationStatus;
+  /** Present only when this image failed; already a client-facing code. */
+  errorCode: string | null;
 }
 
 export interface IllustrationSetDto {
@@ -222,6 +225,12 @@ export interface IllustrationSetDto {
   style: IllustrationStyle;
   status: GenerationStatus;
   illustrations: IllustrationDto[];
+  /**
+   * Real counts behind the "3/12 görsel" label. Sent as numbers rather than a
+   * percentage so the app shows progress it can defend (§29).
+   */
+  readyCount: number;
+  totalCount: number;
   createdAt: IsoDateTime;
 }
 
@@ -265,6 +274,17 @@ export interface BookDto {
   pages: BookPageDto[];
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
+}
+
+export interface BookRenderDto {
+  id: string;
+  bookId: string;
+  kind: BookRenderKind;
+  status: GenerationStatus;
+  /** Signed URL to the rendered artifact; absent until the render succeeds. */
+  fileUrl: string | null;
+  errorCode: string | null;
+  createdAt: IsoDateTime;
 }
 
 // ----------------------------------------------------- Orders & pricing

@@ -11,8 +11,10 @@ import { QueueModule } from './core/queue/queue.module';
 import { AiModule } from './core/ai/ai.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BooksModule } from './modules/books/books.module';
 import { ChildrenModule } from './modules/children/children.module';
 import { HealthModule } from './modules/health/health.module';
+import { IllustrationsModule } from './modules/illustrations/illustrations.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { NarrationModule } from './modules/narration/narration.module';
@@ -34,6 +36,8 @@ import { VoicesModule } from './modules/voices/voices.module';
     StoriesModule,
     VoicesModule,
     NarrationModule,
+    IllustrationsModule,
+    BooksModule,
     JobsModule,
   ],
   providers: [
