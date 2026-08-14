@@ -305,6 +305,7 @@ model User {
   passwordResets     PasswordResetToken[]
   children           Child[]
   voiceProfiles      VoiceProfile[]
+  voiceConsents      VoiceConsent[]
   stories            Story[]
   books              Book[]
   orders             Order[]
@@ -465,6 +466,31 @@ model VoiceProfile {
   @@index([userId, deletedAt])
   @@index([status])
   @@map("voice_profiles")
+}
+
+/// The parent's explicit permission to clone a voice.
+///
+/// Kept apart from VoiceProfile on purpose. It is recorded on the consent screen,
+/// *before* any profile exists, and it has to outlive the profile: deleting the
+/// clone must not erase the record that the recording was ever authorised. The
+/// server refuses to create or clone a voice without a live row here, so the
+/// checkbox in the app is a courtesy rather than the gate (master prompt §21).
+model VoiceConsent {
+  id         String    @id @default(cuid())
+  userId     String
+  /// The exact wording the parent agreed to, so a later revision is auditable.
+  version    String
+  acceptedAt DateTime  @default(now())
+  /// Salted hash. Enough to show the acceptance came from a real session,
+  /// without keeping a log of where a family lives.
+  ipHash     String?
+  userAgent  String?
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, version, revokedAt])
+  @@map("voice_consents")
 }
 
 /// Curated system narrators. Managed from the admin panel; the provider's

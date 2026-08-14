@@ -114,4 +114,61 @@ describe('soft-delete extension', () => {
     });
     expect(withDeleted?.children.map((child) => child.id)).toEqual([deletedChildId]);
   });
+
+  it('nulls out a soft-deleted optional parent instead of returning it', async () => {
+    const story = await raw.story.create({
+      data: {
+        userId,
+        childId: deletedChildId,
+        title: 'Silinmiş çocuğun masalı',
+        heroName: 'Ege',
+        heroType: 'CHILD',
+        themes: ['adventure'],
+        ageRange: 'AGE_3_5',
+        durationTarget: 'SHORT',
+        status: 'READY',
+      },
+    });
+
+    const loaded = await prisma.story.findFirst({
+      where: { id: story.id },
+      include: { child: true },
+    });
+    expect(loaded?.child).toBeNull();
+
+    await raw.story.delete({ where: { id: story.id } });
+  });
+
+  /**
+   * Prisma rejects a `where` on a required to-one relation — there is no way to
+   * express "the parent is filtered out" when the row cannot exist without it.
+   * The extension used to inject one anyway, which turned every read that
+   * included a required parent into an outright error rather than a filtered
+   * result. This is the case that has to keep working.
+   */
+  it('leaves required to-one parents alone so the query still runs', async () => {
+    const story = await raw.story.create({
+      data: {
+        userId,
+        title: 'Anlatılacak masal',
+        heroName: 'Ege',
+        heroType: 'CHILD',
+        themes: ['adventure'],
+        ageRange: 'AGE_3_5',
+        durationTarget: 'SHORT',
+        status: 'READY',
+      },
+    });
+    const narration = await raw.narration.create({
+      data: { storyId: story.id, provider: 'mock', status: 'READY' },
+    });
+
+    const loaded = await prisma.narration.findUnique({
+      where: { id: narration.id },
+      include: { story: true },
+    });
+    expect(loaded?.story.id).toBe(story.id);
+
+    await raw.story.delete({ where: { id: story.id } });
+  });
 });

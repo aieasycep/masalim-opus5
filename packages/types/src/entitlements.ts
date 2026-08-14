@@ -38,7 +38,16 @@ export const ENTITLEMENTS: Readonly<Record<SubscriptionTier, EntitlementSet>> = 
     narration_monthly_limit: 8,
     illustration_monthly_limit: 6,
     parent_voice_clone: false,
-    voice_profile_limit: 0,
+    /**
+     * One trial slot, not zero.
+     *
+     * The no-surprise-paywall rule (§36) is that the Voice Studio says "Premium"
+     * before recording starts and a free parent may still record and hear their
+     * own voice read a sentence back. The gate is `parent_voice_clone`, checked
+     * when the voice is used for a narration — refusing the recording itself
+     * would make the sixty seconds they just read aloud worthless.
+     */
+    voice_profile_limit: 1,
     premium_system_voices: false,
     hd_book_export: false,
     physical_book_discount_percent: 0,

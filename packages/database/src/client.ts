@@ -49,15 +49,33 @@ const TOP_LEVEL_FILTERED_OPERATIONS: ReadonlySet<string> = new Set([
  * what actually keeps a deleted child or voice profile from reappearing inside
  * a parent object.
  */
-type RelationGraph = ReadonlyMap<string, ReadonlyMap<string, string>>;
+interface RelationEdge {
+  readonly target: string;
+  /**
+   * Whether a `where` may be attached to this relation in an `include`.
+   *
+   * Prisma accepts one on list relations and on *optional* to-one relations —
+   * where a non-matching row simply comes back as null. It rejects one on a
+   * required to-one relation, because there is no way to represent "the parent
+   * is filtered out". Injecting it anyway made every read that included a
+   * required parent fail outright, so the shape of the edge has to be known
+   * rather than assumed.
+   */
+  readonly filterable: boolean;
+}
+
+type RelationGraph = ReadonlyMap<string, ReadonlyMap<string, RelationEdge>>;
 
 function buildRelationGraph(): RelationGraph {
-  const graph = new Map<string, Map<string, string>>();
+  const graph = new Map<string, Map<string, RelationEdge>>();
   for (const model of Prisma.dmmf.datamodel.models) {
-    const relations = new Map<string, string>();
+    const relations = new Map<string, RelationEdge>();
     for (const field of model.fields) {
       if (field.kind === 'object') {
-        relations.set(field.name, field.type);
+        relations.set(field.name, {
+          target: field.type,
+          filterable: field.isList || !field.isRequired,
+        });
       }
     }
     graph.set(model.name, relations);
@@ -110,9 +128,11 @@ function filterNestedRelations(model: string, node: Node): Node {
         continue;
       }
 
-      const target = relations.get(key);
-      if (!target) continue;
-      const isSoftDeletable = SOFT_DELETE_MODEL_SET.has(target);
+      const edge = relations.get(key);
+      if (!edge) continue;
+      // A required parent cannot be filtered away; its liveness is the caller's
+      // to check, which is what PolicyService does on every by-id read.
+      const isSoftDeletable = SOFT_DELETE_MODEL_SET.has(edge.target) && edge.filterable;
 
       if (value === true) {
         if (!isSoftDeletable) continue;
@@ -131,7 +151,7 @@ function filterNestedRelations(model: string, node: Node): Node {
         }
       }
 
-      const descended = filterNestedRelations(target, child);
+      const descended = filterNestedRelations(edge.target, child);
       const changed = descended !== value;
       if (!changed) continue;
 
@@ -148,15 +168,18 @@ function filterNestedRelations(model: string, node: Node): Node {
   return result ?? node;
 }
 
-function filterCountBlock(relations: ReadonlyMap<string, string>, value: unknown): unknown {
+function filterCountBlock(
+  relations: ReadonlyMap<string, RelationEdge>,
+  value: unknown,
+): unknown {
   if (!isPlainObject(value)) return value;
   const select = value.select;
   if (!isPlainObject(select)) return value;
 
   let nextSelect: Node | undefined;
   for (const [key, entry] of Object.entries(select)) {
-    const target = relations.get(key);
-    if (!target || !SOFT_DELETE_MODEL_SET.has(target)) continue;
+    const edge = relations.get(key);
+    if (!edge || !SOFT_DELETE_MODEL_SET.has(edge.target)) continue;
 
     if (entry === true) {
       nextSelect = nextSelect ?? { ...select };

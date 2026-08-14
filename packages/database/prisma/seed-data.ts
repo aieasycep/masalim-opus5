@@ -215,16 +215,3 @@ export const APP_VERSION_POLICIES = [
     forceUpdate: false,
   },
 ] as const;
-
-/**
- * The passage a parent reads aloud to create their voice.
- * Roughly 60 seconds at a calm bedtime pace, phonetically varied, and warm
- * enough that reading it does not feel like a chore.
- */
-export const VOICE_ENROLMENT_SCRIPT = `Bir varmış bir yokmuş, çok uzak dağların ötesinde, yıldızların arasında küçük bir köy varmış. Bu köyde yaşayan çocuklar her gece gökyüzüne bakarlarmış. Onlar için her yıldız bir hikâyenin başlangıcıymış.
-
-Köyün en küçük evinde, pencere kenarında oturan bir çocuk yaşarmış. Adı neydi bilen yokmuş ama gülüşünü herkes tanırmış. Her akşam yorganını çenesine kadar çeker, gözlerini kapatır ve o gün duyduğu masalı yeniden kurarmış içinden.
-
-Bazen bir ejderha olurmuş masalında, bazen kaybolmuş bir kedi. Bazen de sadece sıcak bir çorba ve tanıdık bir ses. Çünkü çocuk şunu çok iyi bilirmiş: en güzel masallar, sevdiğin birinin sesiyle anlatılanlarmış.
-
-Ve o ses, ne kadar uzakta olursa olsun, her gece yanına gelirmiş.`;

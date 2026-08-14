@@ -15,8 +15,10 @@ import { ChildrenModule } from './modules/children/children.module';
 import { HealthModule } from './modules/health/health.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
+import { NarrationModule } from './modules/narration/narration.module';
 import { StoriesModule } from './modules/stories/stories.module';
 import { UsersModule } from './modules/users/users.module';
+import { VoicesModule } from './modules/voices/voices.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { UsersModule } from './modules/users/users.module';
     UsersModule,
     ChildrenModule,
     StoriesModule,
+    VoicesModule,
+    NarrationModule,
     JobsModule,
   ],
   providers: [
