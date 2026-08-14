@@ -9,6 +9,8 @@ import { IdempotencyInterceptor } from './core/idempotency/idempotency.intercept
 import { RequestContextMiddleware } from './core/http/request-context.middleware';
 import { QueueModule } from './core/queue/queue.module';
 import { AiModule } from './core/ai/ai.module';
+import { CommerceModule } from './core/commerce/commerce.module';
+import { AddressesModule } from './modules/addresses/addresses.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BooksModule } from './modules/books/books.module';
@@ -18,7 +20,9 @@ import { IllustrationsModule } from './modules/illustrations/illustrations.modul
 import { JobsModule } from './modules/jobs/jobs.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { NarrationModule } from './modules/narration/narration.module';
+import { OrdersModule } from './modules/orders/orders.module';
 import { StoriesModule } from './modules/stories/stories.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { UsersModule } from './modules/users/users.module';
 import { VoicesModule } from './modules/voices/voices.module';
 
@@ -27,6 +31,7 @@ import { VoicesModule } from './modules/voices/voices.module';
     CoreModule,
     QueueModule,
     AiModule,
+    CommerceModule,
     AssetsModule,
     ModerationModule,
     HealthModule,
@@ -38,6 +43,9 @@ import { VoicesModule } from './modules/voices/voices.module';
     NarrationModule,
     IllustrationsModule,
     BooksModule,
+    SubscriptionsModule,
+    AddressesModule,
+    OrdersModule,
     JobsModule,
   ],
   providers: [

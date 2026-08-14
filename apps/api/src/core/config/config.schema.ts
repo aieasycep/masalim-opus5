@@ -72,6 +72,8 @@ export const envSchema = z
     SUBSCRIPTION_PROVIDER: z.enum(['mock', 'revenuecat']).default('mock'),
     REVENUECAT_SECRET_API_KEY: z.string().optional(),
     REVENUECAT_WEBHOOK_AUTH_HEADER: z.string().optional(),
+    /** The entitlement identifier configured in RevenueCat. */
+    REVENUECAT_ENTITLEMENT_ID: z.string().default('premium'),
 
     PRINT_PROVIDER: z.enum(['mock']).default('mock'),
 

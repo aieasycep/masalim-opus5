@@ -310,9 +310,18 @@ export interface PrintProductDto {
   bookSize: BookSize;
   coverType: CoverType;
   displayNameKey: string;
-  unitPrice: Money;
+  /**
+   * What a book within the included page allowance costs — the "…'den başlayan
+   * fiyatlarla" figure on the format picker. The price actually charged depends
+   * on the page count and is always computed by the server; the app asks
+   * `POST /orders/quote` for it rather than doing this arithmetic itself.
+   */
+  basePrice: Money;
+  perPagePrice: Money;
+  includedPages: number;
   minPages: number;
   maxPages: number;
+  productionDays: number;
 }
 
 /** Always computed by the backend; the client never sends a price (§82). */
@@ -339,6 +348,22 @@ export interface OrderSummaryDto {
   coverImageUrl: string | null;
   trackingNumber: string | null;
   createdAt: IsoDateTime;
+}
+
+/**
+ * What the app must do to complete a payment.
+ *
+ * Turkish 3D Secure returns an HTML form the app posts inside a web view rather
+ * than a plain URL, so the shape is a union — a client that assumed a redirect
+ * would break the day a real acquirer is switched on.
+ */
+export interface PaymentInitiationDto {
+  paymentId: string;
+  providerPaymentId: string;
+  checkout:
+    | { kind: 'redirect'; url: string }
+    | { kind: 'html_form'; html: string }
+    | { kind: 'none' };
 }
 
 export interface OrderDto extends OrderSummaryDto {

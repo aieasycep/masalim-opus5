@@ -20,6 +20,7 @@
     "@masalim/book-render": "workspace:*",
     "@masalim/database": "workspace:*",
     "@masalim/localization": "workspace:*",
+    "@masalim/payments": "workspace:*",
     "@masalim/storage": "workspace:*",
     "@masalim/types": "workspace:*",
     "@masalim/validation": "workspace:*",

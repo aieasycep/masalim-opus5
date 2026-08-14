@@ -48,7 +48,17 @@ export async function createApp(options: CreateAppOptions = {}): Promise<INestAp
   // The local-storage upload endpoint receives a raw binary PUT; everything else
   // is JSON. Ordering matters — the raw parser must be registered first.
   app.use('/uploads/local', raw({ type: '*/*', limit: '400mb' }));
-  app.use(json({ limit: '2mb' }));
+  app.use(
+    json({
+      limit: '2mb',
+      // Store-webhook signatures are computed over the exact bytes sent. Parsing
+      // and re-serialising changes key order and whitespace, and the signature
+      // then never verifies — so the original buffer is kept alongside.
+      verify: (request, _response, buffer) => {
+        (request as { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
+      },
+    }),
+  );
   app.use(urlencoded({ extended: true, limit: '2mb' }));
 
   // Rate limiting and IP hashing depend on the real client address, which sits
