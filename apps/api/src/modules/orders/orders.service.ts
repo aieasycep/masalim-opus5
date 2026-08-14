@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
 import { normaliseAmount, type PrintProvider } from '@masalim/payments';
 import {
   ERROR_CODES,
@@ -17,6 +16,7 @@ import { AppLogger } from '../../core/logger/logger.service';
 import { Clock } from '../../core/time/clock';
 import { AssetsService } from '../assets/assets.service';
 import { AddressesService } from '../addresses/addresses.service';
+import { withUniqueOrderNumber } from './order-number';
 import { PricingService } from './pricing.service';
 
 /** Statuses a parent may still cancel from; past this the book is on a press. */
@@ -106,55 +106,62 @@ export class OrdersService {
       city: address.city,
     });
 
-    const order = await this.prisma.client.$transaction(async (tx) => {
-      const created = await tx.order.create({
-        data: {
-          userId,
-          bookId: book.id,
-          printProductId,
-          orderNumber: this.orderNumber(),
-          quantity: input.quantity,
-          bookSize: input.bookSize,
-          coverType: input.coverType,
-          pageCount: breakdown.pageCount,
-          subtotal: breakdown.subtotal,
-          discount: breakdown.discount,
-          shipping: breakdown.shipping,
-          total: breakdown.total,
-          currency: breakdown.currency,
-          status: 'PENDING_PAYMENT',
-          paymentStatus: 'PENDING',
-          shippingAddressId: address.id,
-          bookSnapshot: {
-            title: book.title,
-            subtitle: book.subtitle,
-            dedication: book.dedication,
-            backCoverText: book.backCoverText,
-            coverIllustrationId: book.coverIllustrationId,
-            pages: pages.map((page) => ({
-              pageNumber: page.pageNumber,
-              text: page.text,
-              layout: page.layout,
-              illustrationId: page.illustrationId,
-              assetId: page.illustration?.assetId ?? null,
-            })),
-          },
-          addressSnapshot: this.addresses.toDto(address),
-          storyVersion: book.storyVersion,
-          idempotencyKey: input.idempotencyKey,
-          estimatedDeliveryMin: breakdown.estimatedDeliveryMin,
-          estimatedDeliveryMax: breakdown.estimatedDeliveryMax,
-        },
-      });
+    const order = await withUniqueOrderNumber(
+      this.clock.now().getUTCFullYear(),
+      (candidate) =>
+        this.prisma.client.$transaction(async (tx) => {
+          const created = await tx.order.create({
+            data: {
+              userId,
+              bookId: book.id,
+              printProductId,
+              orderNumber: candidate,
+              quantity: input.quantity,
+              bookSize: input.bookSize,
+              coverType: input.coverType,
+              pageCount: breakdown.pageCount,
+              subtotal: breakdown.subtotal,
+              discount: breakdown.discount,
+              shipping: breakdown.shipping,
+              total: breakdown.total,
+              currency: breakdown.currency,
+              status: 'PENDING_PAYMENT',
+              paymentStatus: 'PENDING',
+              shippingAddressId: address.id,
+              bookSnapshot: {
+                title: book.title,
+                subtitle: book.subtitle,
+                dedication: book.dedication,
+                backCoverText: book.backCoverText,
+                coverIllustrationId: book.coverIllustrationId,
+                pages: pages.map((page) => ({
+                  pageNumber: page.pageNumber,
+                  text: page.text,
+                  layout: page.layout,
+                  illustrationId: page.illustrationId,
+                  assetId: page.illustration?.assetId ?? null,
+                })),
+              },
+              addressSnapshot: this.addresses.toDto(address),
+              storyVersion: book.storyVersion,
+              idempotencyKey: input.idempotencyKey,
+              estimatedDeliveryMin: breakdown.estimatedDeliveryMin,
+              estimatedDeliveryMax: breakdown.estimatedDeliveryMax,
+            },
+          });
 
-      await tx.orderEvent.create({
-        data: { orderId: created.id, type: 'ORDER_CREATED', payload: {} },
-      });
+          await tx.orderEvent.create({
+            data: { orderId: created.id, type: 'ORDER_CREATED', payload: {} },
+          });
 
-      await tx.book.update({ where: { id: book.id }, data: { status: 'ORDERED' } });
+          await tx.book.update({ where: { id: book.id }, data: { status: 'ORDERED' } });
 
-      return created;
-    });
+          return created;
+        }),
+      (attempt) => {
+        this.logger.warn({ attempt, userId }, 'order number collided, drawing another');
+      },
+    );
 
     this.logger
       .child({ userId, orderId: order.id })
@@ -265,18 +272,6 @@ export class OrdersService {
     payload: Record<string, unknown> = {},
   ): Promise<void> {
     await this.prisma.client.orderEvent.create({ data: { orderId, type, payload } });
-  }
-
-  /**
-   * Human-facing order number.
-   *
-   * Random rather than sequential: a sequential number tells any customer how
-   * many books the business has sold, and lets them guess their neighbour's.
-   */
-  private orderNumber(): string {
-    const year = this.clock.now().getUTCFullYear();
-    const suffix = randomBytes(4).readUInt32BE(0).toString(36).toUpperCase().padStart(6, '0');
-    return `MSL-${String(year)}-${suffix}`;
   }
 
   private toQuoteDto(

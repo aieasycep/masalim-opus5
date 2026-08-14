@@ -29,22 +29,23 @@ export function isPrismaError(
 }
 
 /**
- * Human-facing order numbers.
+ * True when a unique constraint failed *on a particular field*.
  *
- * Sequential ids would leak how many orders the business has taken, so the
- * number is a date prefix plus random characters from an alphabet with no
- * look-alike glyphs (no O/0, I/1) — a customer has to read these aloud.
+ * A table usually has more than one unique column, and the right reaction differs
+ * per column — a clashing random order number should be redrawn, while a clashing
+ * idempotency key means the caller wants the row that already exists. Reacting to
+ * the bare `P2002` cannot tell them apart.
+ *
+ * Prisma reports the columns in `meta.target`, as an array for most databases and
+ * a bare string for a few; both shapes are accepted here.
  */
-const ORDER_NUMBER_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export function isUniqueViolationOn(error: unknown, field: string): boolean {
+  if (!isPrismaError(error, PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT)) return false;
 
-export function generateOrderNumber(now: Date, random: () => number = Math.random): string {
-  const year = now.getUTCFullYear().toString().slice(-2);
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  let suffix = '';
-  for (let i = 0; i < 6; i += 1) {
-    suffix += ORDER_NUMBER_ALPHABET.charAt(Math.floor(random() * ORDER_NUMBER_ALPHABET.length));
-  }
-  return `MS${year}${month}-${suffix}`;
+  const target = (error.meta as { target?: unknown } | undefined)?.target;
+  if (typeof target === 'string') return target.includes(field);
+  if (Array.isArray(target)) return target.some((column) => String(column).includes(field));
+  return false;
 }
 
 /** First and last day of the calendar month a quota period covers, in UTC. */

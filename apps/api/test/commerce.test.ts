@@ -16,6 +16,7 @@ import type {
 } from '@masalim/types';
 import { MockPaymentProvider, MockPrintProvider } from '@masalim/payments';
 import { PAYMENT_PROVIDER, PRINT_PROVIDER } from '../src/core/commerce/commerce.module';
+import { ORDER_NUMBER_PATTERN } from '../src/modules/orders/order-number';
 import {
   authHeader,
   createTestApp,
@@ -297,7 +298,7 @@ describe('commerce', () => {
       expect(order.total.amount).toBe(quote.total.amount);
       expect(order.subtotal.amount).toBe(quote.subtotal.amount);
       expect(order.status).toBe('PENDING_PAYMENT');
-      expect(order.orderNumber).toMatch(/^MSL-\d{4}-[A-Z0-9]{6}$/);
+      expect(order.orderNumber).toMatch(ORDER_NUMBER_PATTERN);
     });
 
     it('freezes the book so later edits cannot change what was ordered', async () => {

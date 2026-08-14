@@ -80,19 +80,13 @@ export class OrdersController {
 
   @Get('orders/:id')
   @ApiOperation({ summary: 'One order with its status history' })
-  async findOne(
-    @CurrentUserId() userId: string,
-    @Param('id') orderId: string,
-  ): Promise<OrderDto> {
+  async findOne(@CurrentUserId() userId: string, @Param('id') orderId: string): Promise<OrderDto> {
     return this.orders.findOne(userId, orderId);
   }
 
   @Post('orders/:id/cancel')
   @ApiOperation({ summary: 'Cancel an order that has not gone to print' })
-  async cancel(
-    @CurrentUserId() userId: string,
-    @Param('id') orderId: string,
-  ): Promise<OrderDto> {
+  async cancel(@CurrentUserId() userId: string, @Param('id') orderId: string): Promise<OrderDto> {
     return this.orders.cancel(userId, orderId);
   }
 

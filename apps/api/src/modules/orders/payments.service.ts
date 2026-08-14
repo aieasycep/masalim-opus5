@@ -241,7 +241,9 @@ export class PaymentsService {
   async submitToPrinter(orderId: string): Promise<void> {
     const order = await this.prisma.client.order.findUniqueOrThrow({
       where: { id: orderId },
-      include: { book: { include: { renders: { where: { kind: 'PRINT_PDF', status: 'READY' } } } } },
+      include: {
+        book: { include: { renders: { where: { kind: 'PRINT_PDF', status: 'READY' } } } },
+      },
     });
 
     if (order.printProviderOrderId) return;

@@ -1,10 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  normaliseAmount,
-  quotePrice,
-  PricingError,
-  type PriceBreakdown,
-} from '@masalim/payments';
+import { normaliseAmount, quotePrice, PricingError, type PriceBreakdown } from '@masalim/payments';
 import {
   ENTITLEMENT_KEYS,
   ERROR_CODES,

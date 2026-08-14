@@ -7,8 +7,8 @@
     "dev": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "export": "expo export --platform all --output-dir dist",
-    "build": "expo export --platform all --output-dir dist",
+    "export": "expo export --platform ios --platform android --output-dir dist",
+    "build": "expo export --platform ios --platform android --output-dir dist",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint app src",
     "test": "vitest run",
@@ -17,6 +17,7 @@
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
     "@expo-google-fonts/nunito": "^0.4.1",
+    "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.2",
     "@hookform/resolvers": "^3.10.0",
     "@masalim/api-client": "workspace:*",
@@ -62,6 +63,7 @@
     "@masalim/config": "workspace:*",
     "@types/react": "~19.1.0",
     "eslint": "^9.18.0",
+    "react-dom": "19.1.0",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   }

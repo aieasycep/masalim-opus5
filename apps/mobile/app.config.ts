@@ -18,6 +18,15 @@ const config: ExpoConfig = {
   newArchEnabled: true,
   backgroundColor: '#FAF8F4',
 
+  /**
+   * Native only. Expo's default includes `web`, which makes `expo export` demand
+   * react-native-web — a runtime this app has no use for: recording leans on
+   * expo-audio's native metering, tokens live in the Keychain/Keystore through
+   * SecureStore, and narration keeps playing under a locked screen. Declaring the
+   * two platforms we actually ship keeps the export honest.
+   */
+  platforms: ['ios', 'android'],
+
   splash: {
     backgroundColor: '#1A0F3C',
     resizeMode: 'contain',

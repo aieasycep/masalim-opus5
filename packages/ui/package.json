@@ -30,6 +30,7 @@
     "@masalim/config": "workspace:*",
     "@types/react": "~19.1.0",
     "eslint": "^9.18.0",
+    "expo": "~54.0.12",
     "expo-linear-gradient": "~15.0.7",
     "react": "19.1.0",
     "react-native": "0.81.4",
