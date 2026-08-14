@@ -7,6 +7,7 @@ import type {
   BookDto,
   BookRenderDto,
   ChildDto,
+  DeletionRequestDto,
   EntitlementsResponse,
   HomeDto,
   IllustrationDto,
@@ -42,6 +43,7 @@ import type {
   InitiatePaymentInput,
   ListStoriesInput,
   PriceQuoteInput,
+  RequestAccountDeletionInput,
   RegisterDeviceInput,
   RenameVoiceProfileInput,
   RenderBookInput,
@@ -117,8 +119,15 @@ export function createEndpoints(http: HttpClient) {
       updateAudioPreferences: (body: AudioPreferencesInput) =>
         http.patch<AudioPreferencesInput>('/users/me/audio-preferences', body),
       completeOnboarding: () => http.post<UserDto>('/users/me/onboarding-complete'),
-      requestDeletion: (reason?: string) =>
-        http.post<void>('/users/me/deletion-request', reason ? { reason } : {}),
+      /**
+       * Deletion is a *request*, and the server requires the account's own email
+       * typed back — an accidental tap must not be able to destroy a family's
+       * stories and voices. The returned record carries the date it will be
+       * carried out, which is what the screen shows.
+       */
+      requestDeletion: (body: RequestAccountDeletionInput) =>
+        http.post<DeletionRequestDto>('/users/me/deletion-request', body),
+      deletionRequests: () => http.get<DeletionRequestDto[]>('/users/me/deletion-requests'),
     },
 
     children: {

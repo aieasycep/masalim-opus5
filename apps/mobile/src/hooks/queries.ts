@@ -13,6 +13,7 @@ import type {
   BookDto,
   BookRenderDto,
   ChildDto,
+  DeletionRequestDto,
   EntitlementsResponse,
   HomeDto,
   IllustrationDto,
@@ -49,6 +50,7 @@ import type {
   NotificationPreferencesInput,
   PriceQuoteInput,
   RenderBookInput,
+  RequestAccountDeletionInput,
   SubmitVoiceRecordingInput,
   UpdateBookInput,
   UpdateBookPageInput,
@@ -839,12 +841,17 @@ export function useCompleteOnboarding(): UseMutationResult<UserDto, unknown, voi
  * Asks for the account to be deleted.
  *
  * A request, not an immediate wipe: the server records it and a worker carries it
- * out, including removing cloned voices at the provider. The screen says so
- * rather than implying the data is already gone.
+ * out, including removing cloned voices at the provider. The returned record
+ * carries the date that will happen, and the screen shows it rather than
+ * implying the data is already gone.
  */
-export function useRequestDeletion(): UseMutationResult<void, unknown, string | undefined> {
+export function useRequestDeletion(): UseMutationResult<
+  DeletionRequestDto,
+  unknown,
+  RequestAccountDeletionInput
+> {
   return useMutation({
-    mutationFn: (reason: string | undefined) => api.users.requestDeletion(reason),
+    mutationFn: (input: RequestAccountDeletionInput) => api.users.requestDeletion(input),
   });
 }
 

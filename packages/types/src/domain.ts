@@ -445,6 +445,14 @@ export interface AppUpdatePolicyDto {
 export interface AppConfigDto {
   features: Record<FeatureFlagKey, boolean>;
   update: AppUpdatePolicyDto | null;
+  /**
+   * How long a raw voice recording is kept after the clone succeeds.
+   *
+   * Served rather than hardcoded in the app because the Voice Data screen states
+   * this number to a parent as a promise, and a promise the retention job does
+   * not honour is worse than no number at all.
+   */
+  voiceRawRetentionDays: number;
 }
 
 // --------------------------------------------------------------- Home

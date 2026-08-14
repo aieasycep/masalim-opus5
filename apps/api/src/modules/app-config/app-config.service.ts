@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import type { AppConfigDto, DevicePlatform, FeatureFlagKey } from '@masalim/types';
+import { AppConfigService } from '../../core/config/config.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 
 /**
@@ -21,7 +22,10 @@ export function compareVersions(left: string, right: string): number {
 
 @Injectable()
 export class AppConfigModuleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: AppConfigService,
+  ) {}
 
   /**
    * Everything the app needs to decide what to show on launch.
@@ -65,7 +69,11 @@ export class AppConfigModuleService {
           }
         : null;
 
-    return { features: features as Record<FeatureFlagKey, boolean>, update };
+    return {
+      features: features as Record<FeatureFlagKey, boolean>,
+      update,
+      voiceRawRetentionDays: this.config.get('VOICE_RAW_RETENTION_DAYS'),
+    };
   }
 
   /**
