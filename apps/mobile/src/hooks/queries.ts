@@ -11,9 +11,11 @@ import type {
   AddressDto,
   AppConfigDto,
   BookDto,
+  BookRenderDto,
   ChildDto,
   EntitlementsResponse,
   HomeDto,
+  IllustrationDto,
   IllustrationSetDto,
   InterestDto,
   NarrationDto,
@@ -22,6 +24,8 @@ import type {
   OrderDto,
   OrderSummaryDto,
   Paginated,
+  PaymentInitiationDto,
+  PaymentStatus,
   PriceQuoteDto,
   PrintProductDto,
   StoryDto,
@@ -32,15 +36,24 @@ import type {
 } from '@masalim/types';
 import type {
   AddressInput,
+  AudioPreferencesInput,
+  CreateBookInput,
   CreateChildInput,
+  CreateIllustrationSetInput,
+  CreateNarrationInput,
+  CreateOrderInput,
   CreateStoryInput,
   CreateVoiceProfileInput,
+  InitiatePaymentInput,
   ListStoriesInput,
+  NotificationPreferencesInput,
   PriceQuoteInput,
+  RenderBookInput,
   SubmitVoiceRecordingInput,
   UpdateBookInput,
   UpdateBookPageInput,
   UpdateChildInput,
+  UpdateProfileInput,
   UpdateStoryInput,
 } from '@masalim/validation';
 import { api } from '../lib/api';
@@ -85,6 +98,14 @@ export function useInterests(): UseQueryResult<InterestDto[]> {
     queryFn: () => api.children.interests(),
     // Reference data; it changes when the product does, not while the app runs.
     staleTime: 60 * 60 * 1000,
+  });
+}
+
+export function useChild(id: string | null): UseQueryResult<ChildDto> {
+  return useQuery({
+    queryKey: queryKeys.children.detail(id ?? ''),
+    queryFn: () => api.children.get(id ?? ''),
+    enabled: Boolean(id),
   });
 }
 
@@ -379,6 +400,94 @@ export function useIllustrationSet(id: string | null): UseQueryResult<Illustrati
   });
 }
 
+/**
+ * Asks for a story to be read aloud.
+ *
+ * The narration and its job come back together; the screen follows the job and
+ * the story's narration list is stale the moment the job is queued.
+ */
+export function useCreateNarration(): UseMutationResult<
+  { narration: NarrationDto; job: AIJobDto },
+  unknown,
+  { storyId: string; input: CreateNarrationInput }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ storyId, input }: { storyId: string; input: CreateNarrationInput }) =>
+      api.narrations.create(storyId, input),
+    onSuccess: (_result, { storyId }) => {
+      void client.invalidateQueries({ queryKey: queryKeys.stories.narrations(storyId) });
+      void client.invalidateQueries({ queryKey: queryKeys.stories.detail(storyId) });
+      void client.invalidateQueries({ queryKey: queryKeys.subscription.entitlements });
+    },
+  });
+}
+
+export function useDeleteNarration(): UseMutationResult<
+  void,
+  unknown,
+  { id: string; storyId: string }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string; storyId: string }) => api.narrations.remove(id),
+    onSuccess: (_result, { storyId }) => {
+      void client.invalidateQueries({ queryKey: queryKeys.stories.narrations(storyId) });
+      void client.invalidateQueries({ queryKey: queryKeys.stories.detail(storyId) });
+    },
+  });
+}
+
+export function useCreateIllustrationSet(): UseMutationResult<
+  { set: IllustrationSetDto; job: AIJobDto },
+  unknown,
+  { storyId: string; input: CreateIllustrationSetInput }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ storyId, input }: { storyId: string; input: CreateIllustrationSetInput }) =>
+      api.illustrations.create(storyId, input),
+    onSuccess: (_result, { storyId }) => {
+      void client.invalidateQueries({ queryKey: queryKeys.stories.illustrations(storyId) });
+      void client.invalidateQueries({ queryKey: queryKeys.stories.detail(storyId) });
+      void client.invalidateQueries({ queryKey: queryKeys.subscription.entitlements });
+    },
+  });
+}
+
+export function useRegenerateIllustration(): UseMutationResult<
+  { illustration: IllustrationDto; job: AIJobDto },
+  unknown,
+  { illustrationId: string; setId: string; idempotencyKey: string }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      illustrationId,
+      idempotencyKey,
+    }: {
+      illustrationId: string;
+      setId: string;
+      idempotencyKey: string;
+    }) => api.illustrations.regenerate(illustrationId, idempotencyKey),
+    onSuccess: (_result, { setId }) => {
+      void client.invalidateQueries({ queryKey: queryKeys.illustrationSets.detail(setId) });
+      void client.invalidateQueries({ queryKey: queryKeys.subscription.entitlements });
+    },
+  });
+}
+
+/** Picks which variant of a page's illustration is the keeper. */
+export function useSelectIllustration(): UseMutationResult<IllustrationSetDto, unknown, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (illustrationId: string) => api.illustrations.select(illustrationId),
+    onSuccess: (set) => {
+      client.setQueryData(queryKeys.illustrationSets.detail(set.id), set);
+    },
+  });
+}
+
 // ---------------------------------------------------------------- Books
 
 export function useBooks(): UseQueryResult<BookDto[]> {
@@ -438,6 +547,50 @@ export function useUpdateBookPage(): UseMutationResult<
   });
 }
 
+export function useCreateBook(): UseMutationResult<BookDto, unknown, CreateBookInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateBookInput) => api.books.create(input),
+    onSuccess: (book) => {
+      client.setQueryData(queryKeys.books.detail(book.id), book);
+      void client.invalidateQueries({ queryKey: queryKeys.books.list() });
+      void client.invalidateQueries({ queryKey: queryKeys.stories.detail(book.storyId) });
+    },
+  });
+}
+
+export function useDeleteBook(): UseMutationResult<void, unknown, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.books.remove(id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.books.all });
+      void client.invalidateQueries({ queryKey: queryKeys.stories.all });
+    },
+  });
+}
+
+/**
+ * Renders the book — a preview to read on the phone, or the print-ready file.
+ *
+ * Both go through a job, so the caller watches the returned job rather than
+ * waiting on this promise; a full-colour book takes far longer than a request.
+ */
+export function useRenderBook(): UseMutationResult<
+  { render: BookRenderDto; job: AIJobDto },
+  unknown,
+  { id: string; input: RenderBookInput }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: RenderBookInput }) =>
+      api.books.render(id, input),
+    onSuccess: (_result, { id }) => {
+      void client.invalidateQueries({ queryKey: queryKeys.books.renders(id) });
+    },
+  });
+}
+
 // ------------------------------------------------------------- Commerce
 
 export function useAddresses(): UseQueryResult<AddressDto[]> {
@@ -479,6 +632,95 @@ export function usePriceQuote(input: PriceQuoteInput | null): UseQueryResult<Pri
   });
 }
 
+export function useUpdateAddress(): UseMutationResult<
+  AddressDto,
+  unknown,
+  { id: string; input: Partial<AddressInput> }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<AddressInput> }) =>
+      api.addresses.update(id, input),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.addresses.all });
+    },
+  });
+}
+
+export function useDeleteAddress(): UseMutationResult<void, unknown, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.addresses.remove(id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.addresses.all });
+    },
+  });
+}
+
+/**
+ * Places the order.
+ *
+ * The client sends configuration only — never a total. The price on the returned
+ * order is the one the server computed from its own catalogue, and it is what the
+ * confirmation screen shows.
+ */
+export function useCreateOrder(): UseMutationResult<OrderDto, unknown, CreateOrderInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateOrderInput) => api.orders.create(input),
+    onSuccess: (order) => {
+      client.setQueryData(queryKeys.orders.detail(order.id), order);
+      void client.invalidateQueries({ queryKey: queryKeys.orders.list() });
+      // The book is now ORDERED, which the library and book screens both show.
+      void client.invalidateQueries({ queryKey: queryKeys.books.all });
+    },
+  });
+}
+
+export function useCancelOrder(): UseMutationResult<OrderDto, unknown, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.orders.cancel(id),
+    onSuccess: (order) => {
+      client.setQueryData(queryKeys.orders.detail(order.id), order);
+      void client.invalidateQueries({ queryKey: queryKeys.orders.list() });
+    },
+  });
+}
+
+/** Starts payment and returns the 3-D Secure hand-off the checkout screen opens. */
+export function useInitiatePayment(): UseMutationResult<
+  PaymentInitiationDto,
+  unknown,
+  InitiatePaymentInput
+> {
+  return useMutation({
+    mutationFn: (input: InitiatePaymentInput) => api.orders.initiatePayment(input),
+  });
+}
+
+/**
+ * Confirms the outcome after the 3-D Secure page returns.
+ *
+ * The bank's redirect is not proof of anything — the server re-checks with the
+ * provider, and this is how the app learns what actually happened.
+ */
+export function useVerifyPayment(): UseMutationResult<
+  { status: PaymentStatus },
+  unknown,
+  { orderId: string; providerPaymentId: string }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, providerPaymentId }: { orderId: string; providerPaymentId: string }) =>
+      api.orders.verifyPayment(orderId, providerPaymentId),
+    onSuccess: (_result, { orderId }) => {
+      void client.invalidateQueries({ queryKey: queryKeys.orders.detail(orderId) });
+      void client.invalidateQueries({ queryKey: queryKeys.orders.list() });
+    },
+  });
+}
+
 export function useOrders(): UseQueryResult<Paginated<OrderSummaryDto>> {
   return useQuery({ queryKey: queryKeys.orders.list(), queryFn: () => api.orders.list() });
 }
@@ -513,5 +755,115 @@ export function useNotifications(): UseQueryResult<NotificationDto[]> {
   return useQuery({
     queryKey: queryKeys.notifications.list,
     queryFn: () => api.notifications.list(),
+  });
+}
+
+export function useRefreshSubscription(): UseMutationResult<SubscriptionDto, unknown, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.subscription.refresh(),
+    onSuccess: (subscription) => {
+      client.setQueryData(queryKeys.subscription.current, subscription);
+      // Entitlements are what the guards read; they move with the subscription.
+      void client.invalidateQueries({ queryKey: queryKeys.subscription.entitlements });
+    },
+  });
+}
+
+// ------------------------------------------------------- Profile & settings
+
+export function useUpdateProfile(): UseMutationResult<UserDto, unknown, UpdateProfileInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateProfileInput) => api.users.update(input),
+    onSuccess: (user) => {
+      client.setQueryData(queryKeys.user.me, user);
+    },
+  });
+}
+
+export function useNotificationPreferences(): UseQueryResult<NotificationPreferencesInput> {
+  return useQuery({
+    queryKey: queryKeys.user.notificationPreferences,
+    queryFn: () => api.users.notificationPreferences(),
+  });
+}
+
+export function useUpdateNotificationPreferences(): UseMutationResult<
+  NotificationPreferencesInput,
+  unknown,
+  NotificationPreferencesInput
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: NotificationPreferencesInput) =>
+      api.users.updateNotificationPreferences(input),
+    onSuccess: (preferences) => {
+      client.setQueryData(queryKeys.user.notificationPreferences, preferences);
+    },
+  });
+}
+
+export function useAudioPreferences(): UseQueryResult<AudioPreferencesInput> {
+  return useQuery({
+    queryKey: queryKeys.user.audioPreferences,
+    queryFn: () => api.users.audioPreferences(),
+  });
+}
+
+export function useUpdateAudioPreferences(): UseMutationResult<
+  AudioPreferencesInput,
+  unknown,
+  AudioPreferencesInput
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AudioPreferencesInput) => api.users.updateAudioPreferences(input),
+    onSuccess: (preferences) => {
+      client.setQueryData(queryKeys.user.audioPreferences, preferences);
+    },
+  });
+}
+
+export function useCompleteOnboarding(): UseMutationResult<UserDto, unknown, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.users.completeOnboarding(),
+    onSuccess: (user) => {
+      client.setQueryData(queryKeys.user.me, user);
+    },
+  });
+}
+
+/**
+ * Asks for the account to be deleted.
+ *
+ * A request, not an immediate wipe: the server records it and a worker carries it
+ * out, including removing cloned voices at the provider. The screen says so
+ * rather than implying the data is already gone.
+ */
+export function useRequestDeletion(): UseMutationResult<void, unknown, string | undefined> {
+  return useMutation({
+    mutationFn: (reason: string | undefined) => api.users.requestDeletion(reason),
+  });
+}
+
+export function useMarkNotificationRead(): UseMutationResult<void, unknown, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.notifications.markRead(id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.notifications.list });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead(): UseMutationResult<void, unknown, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.notifications.markAllRead(),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.notifications.list });
+    },
   });
 }
