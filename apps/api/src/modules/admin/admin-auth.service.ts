@@ -99,6 +99,23 @@ export class AdminAuthService {
     };
   }
 
+  /**
+   * The signed-in operator, re-read rather than echoed.
+   *
+   * The guard already loads the account on every request precisely so a
+   * demotion or a deactivation lands immediately; this returns what it found,
+   * so the console's navigation can never outlive the role behind it.
+   */
+  async current(caller: AdminCallContext): Promise<AdminUserAccountDto> {
+    const admin = await this.prisma.client.adminUser.findUnique({
+      where: { id: caller.actor.id },
+    });
+    if (!admin) {
+      throw new AppError(ERROR_CODES.UNAUTHORIZED, 'This operator account no longer exists');
+    }
+    return this.toAccountDto(admin);
+  }
+
   async logout(caller: AdminCallContext): Promise<void> {
     await this.tokens.revoke(caller.actor.sessionId);
     await this.audit.recordFor(caller, {

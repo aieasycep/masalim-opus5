@@ -130,6 +130,8 @@ Swapping in a real provider is a single environment variable plus its credential
 | [`docs/database.md`](docs/database.md) | Entity relationships and schema notes |
 | [`docs/api.md`](docs/api.md) | REST surface and error format |
 | [`docs/design-system.md`](docs/design-system.md) | Design tokens and component inventory |
+| [`docs/deployment.md`](docs/deployment.md) | Environment variables, migrations and how to run it |
+| [`docs/operations.md`](docs/operations.md) | Health, queues, retention duties and what must be audited |
 
 ---
 

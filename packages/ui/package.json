@@ -6,7 +6,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./tokens": "./src/tokens/index.ts"
+    "./tokens": "./src/tokens/index.ts",
+    "./tokens/colors": "./src/tokens/colors.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
