@@ -4,11 +4,18 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '../../src/components/ui';
 
-const MESSAGES: Record<string, string> = {
+const FALLBACK_MESSAGE = 'Sunucuya ulaşılamıyor.';
+
+const MESSAGES: Readonly<Record<string, string>> = {
   INVALID_CREDENTIALS: 'E-posta veya parola hatalı.',
   RATE_LIMITED: 'Çok fazla deneme yapıldı. Bir süre sonra tekrar deneyin.',
-  UNAVAILABLE: 'Sunucuya ulaşılamıyor.',
+  UNAVAILABLE: FALLBACK_MESSAGE,
 };
+
+/** Any code the console does not recognise still has to say something useful. */
+function messageFor(code: string | undefined): string {
+  return (code ? MESSAGES[code] : undefined) ?? FALLBACK_MESSAGE;
+}
 
 /**
  * The console's front door.
@@ -38,14 +45,14 @@ export default function LoginPage() {
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        setError(MESSAGES[payload?.error ?? 'UNAVAILABLE'] ?? MESSAGES.UNAVAILABLE!);
+        setError(messageFor(payload?.error));
         return;
       }
 
       router.replace('/');
       router.refresh();
     } catch {
-      setError(MESSAGES.UNAVAILABLE!);
+      setError(FALLBACK_MESSAGE);
     } finally {
       setPending(false);
     }
