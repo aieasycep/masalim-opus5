@@ -43,7 +43,8 @@ export function formatMicros(value: string): string {
   const whole = micros / 1_000_000n;
   const fraction = (micros % 1_000_000n).toString().padStart(MICRO_DIGITS, '0');
   const trimmed = fraction.replace(/0+$/, '');
-  const shown = trimmed.length < MIN_FRACTION_DIGITS ? fraction.slice(0, MIN_FRACTION_DIGITS) : trimmed;
+  const shown =
+    trimmed.length < MIN_FRACTION_DIGITS ? fraction.slice(0, MIN_FRACTION_DIGITS) : trimmed;
 
   return `${sign}${INTEGER_FORMAT.format(whole)}${DECIMAL_SEPARATOR}${shown}`;
 }
@@ -76,8 +77,10 @@ export function formatOperatingDay(day: string): string {
  * An instant, shown in the operating timezone.
  *
  * The timezone comes from the API, so an unknown zone identifier would throw
- * inside `Intl` and take the whole panel down with it; UTC is the fallback and
- * is labelled as such by the caller.
+ * inside `Intl` and take the whole panel down with it. The fallback formats in
+ * UTC and says so in the returned string: the caller prints the zone the server
+ * sent, which in exactly this case is the one that did not work, and a time
+ * shown under a label it was not computed in is worse than an ugly one.
  */
 export function formatInstantInZone(instant: string, timeZone: string): string {
   const parsed = new Date(instant);
@@ -92,12 +95,13 @@ export function formatInstantInZone(instant: string, timeZone: string): string {
       minute: '2-digit',
     }).format(parsed);
   } catch {
-    return new Intl.DateTimeFormat('tr-TR', {
+    const utc = new Intl.DateTimeFormat('tr-TR', {
       timeZone: 'UTC',
       day: 'numeric',
       month: 'long',
       hour: '2-digit',
       minute: '2-digit',
     }).format(parsed);
+    return `${utc} (UTC)`;
   }
 }

@@ -35,6 +35,12 @@ export class AdminModerationController {
     return this.moderation.queue(query);
   }
 
+  @Get('moderation/:id')
+  @ApiOperation({ summary: 'One moderation record, whether or not it has been reviewed' })
+  async findOne(@Param('id') recordId: string): Promise<AdminModerationRecordDto> {
+    return this.moderation.findOne(recordId);
+  }
+
   @Get('moderation/:id/subject')
   @ApiOperation({ summary: 'The content behind a queued record; this read is audited' })
   async subject(

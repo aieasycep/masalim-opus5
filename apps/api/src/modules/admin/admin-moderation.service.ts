@@ -64,6 +64,24 @@ export class AdminModerationService {
   }
 
   /**
+   * One record, decided or not.
+   *
+   * The queue deliberately excludes reviewed records, so a console that walked
+   * the queue to find one would lose the page the moment a decision was made —
+   * and could never show what the decision was. This is metadata only; the
+   * story behind it still requires the audited `subject` read.
+   */
+  async findOne(recordId: string): Promise<AdminModerationRecordDto> {
+    const record = await this.prisma.client.moderationRecord.findUnique({
+      where: { id: recordId },
+    });
+    if (!record) {
+      throw new AppError(ERROR_CODES.NOT_FOUND, 'Moderation record not found');
+    }
+    return this.toDto(record);
+  }
+
+  /**
    * The content behind a queued record.
    *
    * Split from the queue on purpose: reading a child's story is a real intrusion

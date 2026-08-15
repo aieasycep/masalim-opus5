@@ -11,6 +11,21 @@ import { readSessionToken } from './session';
  */
 const API_URL = process.env.ADMIN_API_URL ?? 'http://localhost:3000';
 
+/**
+ * Refuses a path that could retarget the call.
+ *
+ * Ids reach these helpers from route params and from form fields, both of which
+ * a browser controls. A value like `../feature-flags/x` would otherwise walk the
+ * URL sideways with the admin bearer still attached. Call sites should encode
+ * their segments — this exists so that forgetting to is a loud failure rather
+ * than a quiet one, since the roles guard is the only thing standing behind it.
+ */
+function assertSafePath(path: string): void {
+  if (path.includes('..') || path.includes('//')) {
+    throw new AdminApiError(0, 'UNSAFE_PATH', `Refusing to request a path with traversal: ${path}`);
+  }
+}
+
 export class AdminApiError extends Error {
   constructor(
     readonly status: number,
@@ -41,6 +56,8 @@ interface RequestOptions {
  * showing one shrug for both.
  */
 export async function adminApi<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  assertSafePath(path);
+
   const token = await readSessionToken();
   if (!token) redirect('/login');
 

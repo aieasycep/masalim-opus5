@@ -92,19 +92,27 @@ export function Stat({
   tone?: 'danger' | 'warning';
 }) {
   return (
-    <Card style={{ flex: '1 1 190px', minWidth: 190 }}>
+    <Card
+      style={{
+        flex: '1 1 190px',
+        minWidth: 190,
+        // Warning is carried by an edge rather than by the number's colour: the
+        // token is an amber meant for backgrounds behind dark text, and at
+        // 2.2:1 against a card it is below the large-text contrast floor. The
+        // digit stays readable and the tile still reads as needing attention.
+        ...(tone ? { borderInlineStartWidth: 4, borderInlineStartStyle: 'solid' } : {}),
+        ...(tone === 'warning' ? { borderInlineStartColor: 'var(--warning)' } : {}),
+        ...(tone === 'danger' ? { borderInlineStartColor: 'var(--destructive)' } : {}),
+      }}
+    >
       <div style={{ fontSize: 13, color: 'var(--muted-foreground)', fontWeight: 600 }}>{label}</div>
       <div
         style={{
           fontSize: 30,
           fontWeight: 700,
           marginTop: 6,
-          color:
-            tone === 'danger'
-              ? 'var(--destructive)'
-              : tone === 'warning'
-                ? 'var(--warning)'
-                : 'var(--foreground)',
+          // Destructive clears 3:1 against a card at this size; warning does not.
+          color: tone === 'danger' ? 'var(--destructive)' : 'var(--foreground)',
         }}
       >
         {value}

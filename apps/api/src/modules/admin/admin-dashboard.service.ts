@@ -54,8 +54,13 @@ export class AdminDashboardService {
       this.prisma.client.order.count({
         where: { status: { in: [...AWAITING_FULFILMENT_STATUSES] } },
       }),
+      // `reviewedAt: null` is what makes this a queue depth rather than a
+      // lifetime total. A decision is recorded beside the classifier's verdict
+      // rather than over it, so the verdict stays REJECTED forever — counting
+      // on verdict alone would show a number that never comes down and never
+      // matches the queue this tile links to.
       this.prisma.client.moderationRecord.count({
-        where: { verdict: { in: [...REVIEWABLE_MODERATION_VERDICTS] } },
+        where: { verdict: { in: [...REVIEWABLE_MODERATION_VERDICTS] }, reviewedAt: null },
       }),
       this.prisma.client.subscription.count({
         where: { status: { in: [...LIVE_SUBSCRIPTION_STATUSES] } },
