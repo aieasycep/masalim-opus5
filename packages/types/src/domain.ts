@@ -1,4 +1,5 @@
 import type {
+  AdminRole,
   AgeRange,
   AIJobStatus,
   AIJobType,
@@ -16,6 +17,7 @@ import type {
   IllustrationKind,
   IllustrationStyle,
   Locale,
+  ModerationStage,
   ModerationStatus,
   NarrationStatus,
   NotificationType,
@@ -506,4 +508,156 @@ export interface AppVersionPolicyDto {
   latestVersion: string;
   forceUpdate: boolean;
   messageKey: string | null;
+}
+
+// --------------------------------------------------------------- Admin
+//
+// The operator panel is for running the service, not for reading families'
+// stories. These DTOs deliberately carry counts, statuses and identifiers
+// rather than story text, children's names or postal addresses; the two places
+// where an operator genuinely needs that detail — reviewing a flagged story and
+// shipping a physical book — have their own DTOs and their own audit entries.
+
+export interface AdminUserAccountDto {
+  id: string;
+  email: string;
+  name: string;
+  role: AdminRole;
+  lastLoginAt: IsoDateTime | null;
+}
+
+export interface AdminSessionDto {
+  admin: AdminUserAccountDto;
+  /** Bearer token for admin routes only; parent routes reject it. */
+  accessToken: string;
+  /** Token lifetime in seconds, so the panel can warn before it lapses. */
+  expiresIn: number;
+}
+
+/** Numbers an operator acts on at the start of a shift. */
+export interface AdminDashboardDto {
+  storiesGeneratedToday: number;
+  storiesFailedToday: number;
+  ordersAwaitingFulfilment: number;
+  moderationQueueDepth: number;
+  activeSubscriptions: number;
+  newUsersToday: number;
+  /** AI spend today in millionths of a currency unit, as a string (it is a BigInt). */
+  aiSpendTodayMicros: string;
+  aiCallsToday: number;
+  aiFailuresToday: number;
+  /** Local calendar day the counts cover, in the operating timezone. */
+  day: IsoDate;
+  timezone: string;
+  generatedAt: IsoDateTime;
+}
+
+export interface AdminModerationRecordDto {
+  id: string;
+  subjectType: string;
+  subjectId: string;
+  stage: ModerationStage;
+  provider: string;
+  /** What the classifier found. Never overwritten by a human decision. */
+  verdict: ModerationStatus;
+  reasonCode: string | null;
+  /** Highest provider category scores, for triage. Never the content itself. */
+  topCategories: Array<{ category: string; score: number }>;
+  createdAt: IsoDateTime;
+  /** The human decision, absent while the record is still queued. */
+  reviewedAt: IsoDateTime | null;
+  reviewOutcome: ModerationStatus | null;
+  reviewNote: string | null;
+}
+
+/**
+ * The content behind a queued record.
+ *
+ * Fetching this is a separate, audited action: a reviewer has to read a child's
+ * story to judge it, and that read should never be anonymous.
+ */
+export interface AdminModerationSubjectDto {
+  recordId: string;
+  subjectType: string;
+  subjectId: string;
+  text: string;
+  storyTitle: string | null;
+  ageRange: AgeRange | null;
+  language: Locale | null;
+}
+
+export interface AdminOrderSummaryDto {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  total: Money;
+  quantity: number;
+  bookSize: BookSize;
+  coverType: CoverType;
+  pageCount: number;
+  /** İl only — enough to route and chase a shipment, not a doorstep. */
+  shippingCity: string | null;
+  trackingNumber: string | null;
+  printProviderOrderId: string | null;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+}
+
+export interface AdminOrderDto extends AdminOrderSummaryDto {
+  userId: string;
+  userEmail: string;
+  bookId: string;
+  bookTitle: string;
+  estimatedDeliveryDays: { min: number; max: number };
+  /** The recipient, revealed only on the single-order view, which is audited. */
+  shippingAddress: AddressDto | null;
+  events: Array<{ type: string; occurredAt: IsoDateTime }>;
+}
+
+export interface AdminUserSummaryDto {
+  id: string;
+  email: string;
+  locale: Locale;
+  subscriptionTier: SubscriptionTier;
+  subscriptionStatus: SubscriptionStatus;
+  childCount: number;
+  storyCount: number;
+  orderCount: number;
+  createdAt: IsoDateTime;
+  lastSeenAt: IsoDateTime | null;
+  deletedAt: IsoDateTime | null;
+}
+
+export interface AdminUserDetailDto extends AdminUserSummaryDto {
+  /** The parent's own name. Children are counted here, never named. */
+  name: string | null;
+  timezone: string;
+  onboardingCompleted: boolean;
+  voiceProfileCount: number;
+  bookCount: number;
+  storiesLast30Days: number;
+  openDeletionRequests: number;
+}
+
+export interface AdminDeletionRequestDto {
+  id: string;
+  userId: string;
+  type: DeletionRequestType;
+  status: DeletionRequestStatus;
+  scheduledFor: IsoDateTime;
+  completedAt: IsoDateTime | null;
+  reason: string | null;
+  errorMessage: string | null;
+  createdAt: IsoDateTime;
+}
+
+export interface AdminFeatureFlagDto {
+  key: string;
+  enabled: boolean;
+  rolloutPercentage: number;
+  description: string | null;
+  updatedByAdminName: string | null;
+  /** Null while the flag still sits at its compiled-in default. */
+  updatedAt: IsoDateTime | null;
 }

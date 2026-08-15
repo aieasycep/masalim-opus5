@@ -97,15 +97,22 @@ export const tr = {
     name: 'Çocuğun adı',
     namePlaceholder: 'Örn. Ege',
     birthDate: 'Doğum tarihi',
+    birthDatePlaceholder: 'GG.AA.YYYY',
+    birthDateHint: 'Doğum tarihini yazarsan yaş aralığını biz seçeriz.',
     ageRange: 'Yaş aralığı',
+    ageQuestion: 'Yaşını nasıl belirtelim?',
     photo: 'Profil fotoğrafı',
     addPhoto: 'Fotoğraf ekle',
     interestsTitle: '{{name}} neleri sever?',
     interestsSubtitle: 'Seçtiklerin masallarında karşına çıkacak.',
     addCustomInterest: 'Kendim ekle',
     customInterestPlaceholder: 'Örn. gökyüzü',
+    interestLimit: 'En fazla {{count}} ilgi alanı seçebilirsin.',
+    customInterestLimit: 'En fazla {{count}} tane kendin ekleyebilirsin.',
     addChild: 'Çocuk Ekle',
     editChild: 'Profili Düzenle',
+    saved: 'Profil kaydedildi.',
+    deleted: 'Profil silindi.',
     deleteChild: 'Profili Sil',
     deleteConfirmTitle: '{{name}} profilini silelim mi?',
     deleteConfirmBody:
@@ -592,6 +599,7 @@ export const tr = {
     searchBody: 'Farklı bir kelimeyle aramayı deneyebilirsin.',
     filterTitle: 'Bu kategoride henüz hikâye yok.',
     notificationsTitle: 'Henüz bildirimin yok.',
+    notificationsBody: 'Masalın hazır olduğunda ilk buradan haber vereceğiz.',
   },
 
   /**
@@ -650,6 +658,9 @@ export const tr = {
   },
 
   notification: {
+    title: 'Bildirimler',
+    markAllRead: 'Tümünü okundu işaretle',
+    unread: 'Okunmadı',
     storyReady: { title: 'Masalın hazır ✨', body: '{{title}} seni bekliyor.' },
     storyFailed: {
       title: 'Masal tamamlanamadı',

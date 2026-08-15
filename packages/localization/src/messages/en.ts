@@ -90,15 +90,22 @@ export const en: MessageCatalogue = {
     name: 'Child’s name',
     namePlaceholder: 'e.g. Ege',
     birthDate: 'Date of birth',
+    birthDatePlaceholder: 'DD.MM.YYYY',
+    birthDateHint: 'Give us the birth date and we will pick the age range.',
     ageRange: 'Age range',
+    ageQuestion: 'How should we set their age?',
     photo: 'Profile photo',
     addPhoto: 'Add a photo',
     interestsTitle: 'What does {{name}} love?',
     interestsSubtitle: 'These will show up in their stories.',
     addCustomInterest: 'Add my own',
     customInterestPlaceholder: 'e.g. the sky',
+    interestLimit: 'You can choose up to {{count}} interests.',
+    customInterestLimit: 'You can add up to {{count}} of your own.',
     addChild: 'Add child',
     editChild: 'Edit profile',
+    saved: 'Profile saved.',
+    deleted: 'Profile deleted.',
     deleteChild: 'Delete profile',
     deleteConfirmTitle: 'Delete {{name}}’s profile?',
     deleteConfirmBody:
@@ -584,6 +591,7 @@ export const en: MessageCatalogue = {
     searchBody: 'Try a different word.',
     filterTitle: 'No stories in this category yet.',
     notificationsTitle: 'No notifications yet.',
+    notificationsBody: 'When a story is ready, you will hear about it here first.',
   },
 
   /**
@@ -639,6 +647,9 @@ export const en: MessageCatalogue = {
   },
 
   notification: {
+    title: 'Notifications',
+    markAllRead: 'Mark all as read',
+    unread: 'Unread',
     storyReady: { title: 'Your story is ready ✨', body: '{{title}} is waiting for you.' },
     storyFailed: {
       title: 'The story could not be finished',

@@ -12,6 +12,7 @@ import { AiModule } from './core/ai/ai.module';
 import { CommerceModule } from './core/commerce/commerce.module';
 import { PushModule } from './core/notifications/push.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { AppConfigFeatureModule } from './modules/app-config/app-config.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -24,6 +25,7 @@ import { ModerationModule } from './modules/moderation/moderation.module';
 import { NarrationModule } from './modules/narration/narration.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { RetentionModule } from './modules/retention/retention.module';
 import { StoriesModule } from './modules/stories/stories.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { UsersModule } from './modules/users/users.module';
@@ -53,6 +55,8 @@ import { VoicesModule } from './modules/voices/voices.module';
     OrdersModule,
     AppConfigFeatureModule,
     JobsModule,
+    RetentionModule,
+    AdminModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AppExceptionFilter },

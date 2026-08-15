@@ -43,6 +43,7 @@ export class ProviderError extends Error {
       | 'invalid_response'
       | 'content_filtered'
       | 'unauthorized'
+      | 'not_found'
       | 'timeout'
       | 'unavailable'
       | 'unknown',

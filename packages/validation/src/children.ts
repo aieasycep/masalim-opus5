@@ -45,5 +45,14 @@ export const createChildSchema = z
   });
 export type CreateChildInput = z.infer<typeof createChildSchema>;
 
-export const updateChildSchema = createChildSchema.innerType().partial();
+/**
+ * `birthDate: null` is how a parent moves a child from an exact date back to an
+ * age band. Without it the column could only ever be overwritten, never
+ * cleared, and the server would keep deriving the band from a date the parent
+ * had already replaced — silently discarding the band they chose.
+ */
+export const updateChildSchema = createChildSchema
+  .innerType()
+  .partial()
+  .extend({ birthDate: birthDateSchema.nullable().optional() });
 export type UpdateChildInput = z.infer<typeof updateChildSchema>;

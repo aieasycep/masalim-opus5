@@ -30,7 +30,7 @@ export interface AuthRequestContext {
   userAgent?: string | undefined;
 }
 
-const ARGON2_OPTIONS = {
+export const ARGON2_OPTIONS = {
   type: argon2.argon2id,
   memoryCost: 19_456,
   timeCost: 2,

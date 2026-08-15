@@ -94,9 +94,19 @@ export class TokenService {
   /** IP addresses are hashed before storage — we need them for anomaly checks,
    *  not for tracking families. */
   hashIp(ip: string | undefined): string | null {
-    if (!ip) return null;
+    return this.hashIdentifier(ip);
+  }
+
+  /**
+   * A pseudonym for anything we must be able to correlate but have no business
+   * storing in clear — an IP, or the address someone typed at a login form they
+   * failed. Keyed on the refresh secret, so the output is useless to anyone who
+   * only has the database.
+   */
+  hashIdentifier(value: string | undefined): string | null {
+    if (!value) return null;
     return createHash('sha256')
-      .update(`${ip}:${this.config.get('JWT_REFRESH_SECRET')}`)
+      .update(`${value}:${this.config.get('JWT_REFRESH_SECRET')}`)
       .digest('hex')
       .slice(0, 32);
   }

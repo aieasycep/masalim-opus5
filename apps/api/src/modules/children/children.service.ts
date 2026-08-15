@@ -100,9 +100,14 @@ export class ChildrenService {
       await this.policy.assertAsset(userId, input.avatarAssetId);
     }
 
+    // An explicit null clears the date, so the band the parent picked is what
+    // decides the age from here on rather than a value they moved away from.
     const ageRange =
       input.birthDate !== undefined || input.ageRange !== undefined
-        ? this.resolveAgeRange(input.birthDate, input.ageRange ?? existing.ageRange)
+        ? this.resolveAgeRange(
+            input.birthDate ?? undefined,
+            input.ageRange ?? existing.ageRange,
+          )
         : existing.ageRange;
 
     await this.prisma.client.$transaction(async (tx) => {
@@ -119,7 +124,12 @@ export class ChildrenService {
         data: {
           ...(input.name !== undefined ? { name: input.name } : {}),
           ...(input.birthDate !== undefined
-            ? { birthDate: new Date(`${input.birthDate}T00:00:00.000Z`) }
+            ? {
+                birthDate:
+                  input.birthDate === null
+                    ? null
+                    : new Date(`${input.birthDate}T00:00:00.000Z`),
+              }
             : {}),
           ageRange,
           ...(input.avatarAssetId !== undefined

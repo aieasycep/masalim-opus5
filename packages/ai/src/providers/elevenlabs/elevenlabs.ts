@@ -59,6 +59,13 @@ function mapStatus(status: number, body: string): ProviderError {
   if (status === 401 || status === 403) {
     return new ProviderError('ElevenLabs rejected the API key', 'unauthorized');
   }
+  // Distinguished from 'unknown' because a delete that 404s has already
+  // achieved what it was asked to do, and a caller cleaning up a voice needs to
+  // tell that apart from a socket reset — which also arrives here as an error
+  // with no retryable flag, and must not be mistaken for success.
+  if (status === 404) {
+    return new ProviderError(`ElevenLabs: no such resource: ${detail}`, 'not_found');
+  }
   if (status >= 500) {
     return new ProviderError(`ElevenLabs unavailable: ${detail}`, 'unavailable');
   }
