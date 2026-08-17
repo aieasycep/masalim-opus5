@@ -17,6 +17,7 @@ export const queryKeys = {
     me: ['user', 'me'] as const,
     notificationPreferences: ['user', 'notification-preferences'] as const,
     audioPreferences: ['user', 'audio-preferences'] as const,
+    privacyPreferences: ['user', 'privacy-preferences'] as const,
   },
   children: {
     all: ['children'] as const,

@@ -490,6 +490,16 @@ export interface SignedUploadDto {
   kind: AssetKind;
 }
 
+export interface PrivacyPreferencesDto {
+  analyticsConsent: boolean;
+  /**
+   * Null until the parent has actually answered. The app uses this to tell
+   * "never asked" from "asked and declined", so a declining parent is not
+   * prompted again every time they open settings.
+   */
+  decidedAt: IsoDateTime | null;
+}
+
 // ------------------------------------------------------------ Deletion
 
 export interface DeletionRequestDto {

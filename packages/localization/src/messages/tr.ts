@@ -540,6 +540,14 @@ export const tr = {
   },
 
   settings: {
+    analyticsTitle: 'Kullanım verileri',
+    analyticsToggle: 'Anonim kullanım verilerini paylaş',
+    analyticsBody:
+      'Hangi ekranların kullanıldığını görmek uygulamayı geliştirmemize yardım ediyor. Çocuğunun adı, yazdığın masal metni ve ses kaydın hiçbir zaman gönderilmez.',
+    analyticsNeverSent: 'Hiçbir zaman gönderilmeyenler',
+    analyticsNeverSentItems: 'Çocuk adları · Masal metinleri · Ses kayıtları · E-posta · Adres',
+    analyticsOff: 'Kapalı. Hiçbir kullanım verisi gönderilmiyor.',
+    analyticsOn: 'Açık. Teşekkürler — istediğin zaman kapatabilirsin.',
     title: 'Ayarlar',
     account: 'Hesap',
     notifications: 'Bildirimler',

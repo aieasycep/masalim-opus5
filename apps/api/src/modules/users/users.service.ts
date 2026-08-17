@@ -3,10 +3,11 @@ import { ERROR_CODES, SIGNED_URL_DEFAULT_TTL_SECONDS, type UserDto } from '@masa
 import type {
   AudioPreferencesInput,
   NotificationPreferencesInput,
+  PrivacyPreferencesInput,
   RequestAccountDeletionInput,
   UpdateProfileInput,
 } from '@masalim/validation';
-import type { DeletionRequestDto } from '@masalim/types';
+import type { DeletionRequestDto, PrivacyPreferencesDto } from '@masalim/types';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { PolicyService } from '../../core/policy/policy.service';
 import { AppError } from '../../core/errors/app-error';
@@ -129,6 +130,43 @@ export class UsersService {
       update: input,
     });
     return input;
+  }
+
+  /**
+   * Analytics consent.
+   *
+   * A row that does not exist means the parent has never been asked, which is
+   * reported as consent false and `decidedAt` null — the app needs those apart
+   * to know whether to prompt at all.
+   */
+  async getPrivacyPreferences(userId: string): Promise<PrivacyPreferencesDto> {
+    const row = await this.prisma.client.privacyPreference.findUnique({ where: { userId } });
+    return {
+      analyticsConsent: row?.analyticsConsent ?? false,
+      decidedAt: row?.decidedAt?.toISOString() ?? null,
+    };
+  }
+
+  /**
+   * Records the parent's answer.
+   *
+   * Writing `decidedAt` on every save is the point: answering "no" is an answer,
+   * and a parent who has declined should not be asked again.
+   */
+  async updatePrivacyPreferences(
+    userId: string,
+    input: PrivacyPreferencesInput,
+  ): Promise<PrivacyPreferencesDto> {
+    const decidedAt = this.clock.now();
+    const row = await this.prisma.client.privacyPreference.upsert({
+      where: { userId },
+      create: { userId, analyticsConsent: input.analyticsConsent, decidedAt },
+      update: { analyticsConsent: input.analyticsConsent, decidedAt },
+    });
+    return {
+      analyticsConsent: row.analyticsConsent,
+      decidedAt: row.decidedAt?.toISOString() ?? null,
+    };
   }
 
   /**

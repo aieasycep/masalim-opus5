@@ -43,6 +43,12 @@ const PRIVACY_ROWS: readonly Row[] = [
   },
   { key: 'aiInfo', labelKey: 'settings.aiInfo', icon: 'sparkle', route: '/settings/ai-info' },
   {
+    key: 'analytics',
+    labelKey: 'settings.analyticsTitle',
+    icon: 'info',
+    route: '/settings/analytics',
+  },
+  {
     key: 'privacy',
     labelKey: 'settings.privacyPolicy',
     icon: 'lock',

@@ -28,6 +28,18 @@ export const audioPreferencesSchema = z.object({
 export type AudioPreferencesInput = z.infer<typeof audioPreferencesSchema>;
 
 /**
+ * Analytics consent, as a decision rather than a flag.
+ *
+ * There is no partial setting on purpose: a parent either agrees to product
+ * analytics or does not, and a menu of collection tiers would only be a way of
+ * making "no" harder to choose.
+ */
+export const privacyPreferencesSchema = z.object({
+  analyticsConsent: z.boolean(),
+});
+export type PrivacyPreferencesInput = z.infer<typeof privacyPreferencesSchema>;
+
+/**
  * Account deletion is deliberately friction-ful: the parent retypes their email
  * so an accidental tap cannot destroy a family's stories and voices.
  */

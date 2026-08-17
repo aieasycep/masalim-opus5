@@ -19,6 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { createQueryClient } from '@masalim/api-client';
 import { ThemeProvider, ToastProvider } from '@masalim/ui';
+import { AnalyticsGate } from '../src/components/AnalyticsGate';
 import { I18nProvider } from '../src/i18n';
 import { useSession } from '../src/stores/session';
 import { useNetworkStatus } from '../src/hooks/use-network-status';
@@ -68,6 +69,7 @@ export default function RootLayout() {
               <ToastProvider>
                 <StatusBar style="auto" />
                 <NetworkWatcher />
+                <AnalyticsGate />
                 <AppGate>
                   <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
                     <Stack.Screen name="(tabs)" />

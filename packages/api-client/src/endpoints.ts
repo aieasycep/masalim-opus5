@@ -30,6 +30,7 @@ import type {
   SystemVoiceDto,
   UserDto,
   VoiceProfileDto,
+  PrivacyPreferencesDto,
 } from '@masalim/types';
 import type {
   AddressInput,
@@ -57,6 +58,7 @@ import type {
   UpdateStoryInput,
   UpdateStoryProgressInput,
   AudioPreferencesInput,
+  PrivacyPreferencesInput,
   NotificationPreferencesInput,
 } from '@masalim/validation';
 import type { HttpClient } from './http';
@@ -118,6 +120,10 @@ export function createEndpoints(http: HttpClient) {
       audioPreferences: () => http.get<AudioPreferencesInput>('/users/me/audio-preferences'),
       updateAudioPreferences: (body: AudioPreferencesInput) =>
         http.patch<AudioPreferencesInput>('/users/me/audio-preferences', body),
+      privacyPreferences: () =>
+        http.get<PrivacyPreferencesDto>('/users/me/privacy-preferences'),
+      updatePrivacyPreferences: (body: PrivacyPreferencesInput) =>
+        http.patch<PrivacyPreferencesDto>('/users/me/privacy-preferences', body),
       completeOnboarding: () => http.post<UserDto>('/users/me/onboarding-complete'),
       /**
        * Deletion is a *request*, and the server requires the account's own email

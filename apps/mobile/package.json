@@ -20,6 +20,7 @@
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.2",
     "@hookform/resolvers": "^3.10.0",
+    "@masalim/analytics": "workspace:*",
     "@masalim/api-client": "workspace:*",
     "@masalim/localization": "workspace:*",
     "@masalim/types": "workspace:*",

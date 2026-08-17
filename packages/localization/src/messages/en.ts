@@ -532,6 +532,14 @@ export const en: MessageCatalogue = {
   },
 
   settings: {
+    analyticsTitle: 'Usage data',
+    analyticsToggle: 'Share anonymous usage data',
+    analyticsBody:
+      'Seeing which screens get used helps us improve the app. Your child’s name, the story text you write and your voice recording are never sent.',
+    analyticsNeverSent: 'Never sent',
+    analyticsNeverSentItems: 'Children’s names · Story text · Voice recordings · Email · Address',
+    analyticsOff: 'Off. No usage data is being sent.',
+    analyticsOn: 'On. Thank you — you can turn this off whenever you like.',
     title: 'Settings',
     account: 'Account',
     notifications: 'Notifications',

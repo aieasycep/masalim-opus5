@@ -34,6 +34,7 @@ import type {
   SubscriptionDto,
   UserDto,
   VoiceProfileDto,
+  PrivacyPreferencesDto,
 } from '@masalim/types';
 import type {
   AddressInput,
@@ -55,10 +56,12 @@ import type {
   UpdateBookInput,
   UpdateBookPageInput,
   UpdateChildInput,
+  PrivacyPreferencesInput,
   UpdateProfileInput,
   UpdateStoryInput,
 } from '@masalim/validation';
 import { api } from '../lib/api';
+import { analytics } from '../lib/analytics';
 import { env } from '../config/env';
 
 /**
@@ -780,6 +783,37 @@ export function useUpdateProfile(): UseMutationResult<UserDto, unknown, UpdatePr
     mutationFn: (input: UpdateProfileInput) => api.users.update(input),
     onSuccess: (user) => {
       client.setQueryData(queryKeys.user.me, user);
+    },
+  });
+}
+
+/**
+ * Analytics consent.
+ *
+ * Read at start-up so the client knows whether it may capture anything at all,
+ * and kept in the cache so the settings toggle and the analytics runtime never
+ * disagree about what the parent chose.
+ */
+export function usePrivacyPreferences(): UseQueryResult<PrivacyPreferencesDto> {
+  return useQuery({
+    queryKey: queryKeys.user.privacyPreferences,
+    queryFn: () => api.users.privacyPreferences(),
+  });
+}
+
+export function useUpdatePrivacyPreferences(): UseMutationResult<
+  PrivacyPreferencesDto,
+  unknown,
+  PrivacyPreferencesInput
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PrivacyPreferencesInput) => api.users.updatePrivacyPreferences(input),
+    onSuccess: (preferences) => {
+      client.setQueryData(queryKeys.user.privacyPreferences, preferences);
+      // The runtime follows the stored decision immediately: withdrawing also
+      // resets the provider, so the device-to-account link goes with it.
+      analytics.setConsent(preferences.analyticsConsent);
     },
   });
 }

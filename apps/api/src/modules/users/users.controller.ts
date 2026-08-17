@@ -3,16 +3,19 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   audioPreferencesSchema,
   notificationPreferencesSchema,
+  privacyPreferencesSchema,
   requestAccountDeletionSchema,
   updateProfileSchema,
   type AudioPreferencesInput,
   type NotificationPreferencesInput,
+  type PrivacyPreferencesInput,
   type RequestAccountDeletionInput,
   type UpdateProfileInput,
 } from '@masalim/validation';
 import type {
   DeletionRequestDto,
   EntitlementsResponse,
+  PrivacyPreferencesDto,
   UserDto,
 } from '@masalim/types';
 import { zodBody } from '../../core/http/zod-validation.pipe';
@@ -86,6 +89,21 @@ export class UsersController {
     @Body(zodBody(audioPreferencesSchema)) body: AudioPreferencesInput,
   ): Promise<AudioPreferencesInput> {
     return this.users.updateAudioPreferences(userId, body);
+  }
+
+  @Get('me/privacy-preferences')
+  @ApiOperation({ summary: 'Analytics consent, and whether it has been answered' })
+  async privacyPreferences(@CurrentUserId() userId: string): Promise<PrivacyPreferencesDto> {
+    return this.users.getPrivacyPreferences(userId);
+  }
+
+  @Patch('me/privacy-preferences')
+  @ApiOperation({ summary: 'Record the parent’s analytics decision' })
+  async updatePrivacyPreferences(
+    @CurrentUserId() userId: string,
+    @Body(zodBody(privacyPreferencesSchema)) body: PrivacyPreferencesInput,
+  ): Promise<PrivacyPreferencesDto> {
+    return this.users.updatePrivacyPreferences(userId, body);
   }
 
   @Post('me/deletion-request')

@@ -82,6 +82,10 @@ const config: ExpoConfig = {
     appEnv: process.env.EXPO_PUBLIC_APP_ENV ?? 'development',
     revenueCatIosKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '',
     revenueCatAndroidKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? '',
+    // Absent in most builds, and that is the intended default: with no key the
+    // client stays on the no-op provider rather than half-reporting.
+    posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '',
+    posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST ?? '',
   },
 };
 

@@ -322,6 +322,7 @@ model User {
   deletionRequests  DeletionRequest[]
   notificationPrefs NotificationPreference?
   audioPrefs        AudioPreference?
+  privacyPrefs      PrivacyPreference?
 
   @@index([deletedAt])
   @@index([createdAt])
@@ -1025,6 +1026,25 @@ model NotificationPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+
+/// Analytics is opt-in and off until a parent says otherwise, which is what
+/// the Analytics client already assumes — it drops events rather than queueing
+/// them, so consent granted later never retroactively ships what someone did
+/// before they agreed.
+///
+/// `decidedAt` separates "has not been asked" from "was asked and declined".
+/// Without it the app cannot tell a parent it should still prompt from one it
+/// must leave alone, and would end up asking a declining parent forever.
+model PrivacyPreference {
+  userId           String    @id
+  analyticsConsent Boolean   @default(false)
+  decidedAt        DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("privacy_preferences")
 }
 
 model AudioPreference {
