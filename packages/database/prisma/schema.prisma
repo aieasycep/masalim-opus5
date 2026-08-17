@@ -13,6 +13,11 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["relationJoins"]
+  /// Pinned rather than inferred. Prisma ships a native query engine per libc
+  /// and OpenSSL combination, and a client generated on one and run on another
+  /// fails at the first query — the container image is Debian bookworm, so that
+  /// target is named explicitly instead of depending on where `generate` ran.
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {

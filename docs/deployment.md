@@ -246,6 +246,52 @@ workers, the Redis clients and both Prisma clients. Send `SIGTERM` and give the
 process time to drain rather than killing it: a worker interrupted mid-purge is
 recoverable, but a worker killed mid-narration wastes a provider call.
 
+## Deploying with containers
+
+`Dockerfile` builds four targets from one builder, and `docker-compose.prod.yml`
+wires them together with Postgres, Redis and MinIO.
+
+```bash
+cp .env.deploy.example .env.deploy      # then fill in the four required values
+docker compose -f docker-compose.prod.yml --env-file .env.deploy up -d --build
+```
+
+The targets are `api`, `worker`, `admin` and `migrate`. Three things about that
+split are deliberate:
+
+**Only the worker carries Chromium.** Rendering a book to PDF is queued work, so
+the browser belongs in the process that does it. Putting it in the HTTP image
+would triple the size of the container you scale horizontally. The worker also
+gets `shm_size: 1gb`, because Chromium cannot render a full-page spread in the
+default 64MB.
+
+**Migrations are their own one-shot service.** Two API replicas booting together
+would otherwise race the same migration, and a schema failure would look like a
+crash-looping application rather than what it is. `api` and `worker` both wait on
+`service_completed_successfully`.
+
+**Debian, not Alpine.** Prisma ships a native query engine per libc/OpenSSL
+combination and Playwright's Chromium expects glibc. The schema pins
+`debian-openssl-3.0.x` explicitly so the generated client matches the image
+regardless of where `prisma generate` ran.
+
+The API's healthcheck hits `/health/ready`, which reports `up` only once its
+Postgres and Redis connections are usable — that is what an orchestrator should
+wait on before sending traffic, rather than `/health`, which answers as soon as
+the process is listening.
+
+### Pointing the app at it
+
+The mobile app compiles its API URL in at build time from `EXPO_PUBLIC_API_URL`,
+so it cannot be redirected afterwards. Set it in the EAS profile
+(`apps/mobile/eas.json`) to the same public origin as `API_BASE_URL` before
+building, or the installed app will keep calling whatever it was built against.
+
+`STORAGE_PUBLIC_URL` matters for the same reason and is easy to get wrong: it is
+the origin the *phone* fetches audio and illustrations from, not the internal
+endpoint the API uploads to. Set it to the internal one and every story will
+generate successfully and then fail to play.
+
 ## What production needs that local development does not
 
 **A different `APP_ENV`.** Setting `APP_ENV=production` turns on refusals that

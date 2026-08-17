@@ -1,0 +1,19 @@
+# Everything the build does not need. Keeping node_modules out matters most:
+# the image installs its own, and copying a host tree in would both bloat the
+# context and risk shipping binaries built for the wrong platform.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/.expo
+**/*.tsbuildinfo
+.git
+.github
+.storage-test
+apps/mobile/dist
+docs
+*.md
+!README.md
+.env
+.env.*
+!.env.deploy.example
