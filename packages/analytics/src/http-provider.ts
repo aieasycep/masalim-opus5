@@ -48,13 +48,19 @@ export class HttpAnalyticsProvider implements AnalyticsProvider {
     private readonly host: string,
     /** Injected so tests do not reach the network. */
     private readonly fetchImpl: typeof fetch = fetch,
+    /**
+     * Injected for the same reason as `fetchImpl`: an event's timestamp is part
+     * of what gets sent, so a test that cannot control it cannot assert on it.
+     */
+    // eslint-disable-next-line no-restricted-syntax -- this default IS the clock source
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   capture(event: AnalyticsEvent, properties?: AnalyticsProperties): void {
     this.queue.push({
       event,
       properties: properties ?? {},
-      timestamp: new Date().toISOString(),
+      timestamp: this.now().toISOString(),
     });
 
     if (this.queue.length > MAX_QUEUE) {

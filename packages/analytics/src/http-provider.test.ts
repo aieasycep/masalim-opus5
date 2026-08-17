@@ -12,7 +12,12 @@ function bodyOf(fetchMock: ReturnType<typeof vi.fn>) {
   const call = fetchMock.mock.calls[0];
   return JSON.parse((call?.[1] as RequestInit).body as string) as {
     api_key: string;
-    batch: Array<{ event: string; distinct_id: string; properties: Record<string, unknown> }>;
+    batch: Array<{
+      event: string;
+      distinct_id: string;
+      timestamp: string;
+      properties: Record<string, unknown>;
+    }>;
   };
 }
 
@@ -112,6 +117,25 @@ describe('HttpAnalyticsProvider', () => {
     await provider.flush();
 
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('stamps each event with the time it was captured', async () => {
+    const fetchImpl = makeFetch();
+    const instants = ['2026-01-01T00:00:00.000Z', '2026-01-01T00:00:05.000Z'];
+    let call = 0;
+    const provider = new HttpAnalyticsProvider(
+      'key',
+      'https://ph.example',
+      fetchImpl,
+      () => new Date(instants[call++] ?? instants[0]!),
+    );
+
+    provider.capture(EVENT);
+    provider.capture(EVENT);
+    await provider.flush();
+
+    const sent = bodyOf(fetchImpl as never);
+    expect(sent.batch.map((entry) => entry.timestamp)).toEqual(instants);
   });
 
   it('tolerates a host with a trailing slash', async () => {

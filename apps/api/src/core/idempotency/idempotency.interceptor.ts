@@ -8,7 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { createHash } from 'node:crypto';
 import type { Request, Response } from 'express';
-import { from, of, switchMap, tap, type Observable } from 'rxjs';
+import { concatMap, from, of, switchMap, type Observable } from 'rxjs';
 import { ERROR_CODES } from '@masalim/types';
 import { AppError } from '../errors/app-error';
 import { PrismaService } from '../prisma/prisma.service';
@@ -80,19 +80,25 @@ export class IdempotencyInterceptor implements NestInterceptor {
           return of(existing.response);
         }
 
+        // The record is committed *before* the response goes out. Storing it
+        // fire-and-forget left a window in which a client that retried quickly
+        // — two taps on "create story" over a slow connection, which is exactly
+        // what an impatient parent does — could look up a key that had not
+        // landed yet, and get a second story and a second generation charged
+        // against their monthly allowance. The guarantee this interceptor
+        // exists to provide is worth one awaited insert.
         return next.handle().pipe(
-          tap({
-            next: (body) => {
-              const response = context.switchToHttp().getResponse<Response>();
-              void this.store({
-                key: storageKey,
-                userId,
-                endpoint,
-                requestHash,
-                statusCode: response.statusCode,
-                body,
-              });
-            },
+          concatMap(async (body) => {
+            const response = context.switchToHttp().getResponse<Response>();
+            await this.store({
+              key: storageKey,
+              userId,
+              endpoint,
+              requestHash,
+              statusCode: response.statusCode,
+              body,
+            });
+            return body as unknown;
           }),
         );
       }),
