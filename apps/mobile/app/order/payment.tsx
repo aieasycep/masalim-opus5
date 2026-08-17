@@ -4,8 +4,10 @@ import { useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 import { WebView, type WebViewNavigation } from 'react-native-webview';
 import { Button, Card, Icon, LoadingState, Screen, ScreenHeader, Text, useTheme } from '@masalim/ui';
-import type { PaymentInitiationDto } from '@masalim/types';
+import { isApiError } from '@masalim/api-client';
+import { ANALYTICS_EVENTS, type PaymentInitiationDto } from '@masalim/types';
 import { useInitiatePayment, useVerifyPayment } from '../../src/hooks/queries';
+import { analytics } from '../../src/lib/analytics';
 import { useOrderDraft } from '../../src/stores/order-draft';
 import { useI18n } from '../../src/i18n';
 
@@ -51,6 +53,10 @@ export default function OrderPaymentScreen() {
           }
         },
         onError: (cause) => {
+          analytics.capture(ANALYTICS_EVENTS.PURCHASE_FAILED, {
+            stage: 'initiate',
+            error_code: isApiError(cause) ? cause.code : null,
+          });
           setError(errorCopy(cause).message);
         },
       },
@@ -77,8 +83,17 @@ export default function OrderPaymentScreen() {
 
       // Declined. The order survives unpaid, so paying again is one tap from
       // its detail screen rather than a rebuilt basket.
+      analytics.capture(ANALYTICS_EVENTS.PURCHASE_FAILED, {
+        stage: 'verify',
+        error_code: 'PAYMENT_FAILED',
+        payment_status: status,
+      });
       setError(errorCopy({ name: 'ApiError', code: 'PAYMENT_FAILED' }).message);
     } catch (cause) {
+      analytics.capture(ANALYTICS_EVENTS.PURCHASE_FAILED, {
+        stage: 'verify',
+        error_code: isApiError(cause) ? cause.code : null,
+      });
       setError(errorCopy(cause).message);
     } finally {
       setVerifying(false);

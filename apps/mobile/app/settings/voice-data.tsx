@@ -16,8 +16,9 @@ import {
   useTheme,
   useToast,
 } from '@masalim/ui';
-import type { VoiceProfileDto } from '@masalim/types';
+import { ANALYTICS_EVENTS, type VoiceProfileDto } from '@masalim/types';
 import { useAppConfig, useDeleteVoice, useVoices } from '../../src/hooks/queries';
+import { analytics } from '../../src/lib/analytics';
 import { useI18n } from '../../src/i18n';
 import { formatShortDate } from '../../src/lib/format';
 
@@ -126,6 +127,13 @@ export default function VoiceDataScreen() {
           if (!target) return;
           remove.mutate(target.id, {
             onSuccess: () => {
+              // Same event as the studio; the source separates a privacy-driven
+              // deletion from tidying up in Ses Stüdyom.
+              analytics.capture(ANALYTICS_EVENTS.VOICE_DELETED, {
+                owner_type: target.ownerType,
+                status: target.status,
+                source: 'privacy_settings',
+              });
               setDeleting(null);
               toast.show({ message: t('voice.deleted'), tone: 'success' });
             },

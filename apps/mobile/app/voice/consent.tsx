@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Card, Icon, Screen, ScreenHeader, Text, useTheme } from '@masalim/ui';
+import { ANALYTICS_EVENTS } from '@masalim/types';
 import { VOICE_CONSENT_VERSION } from '@masalim/validation';
 import { useAcceptVoiceConsent } from '../../src/hooks/queries';
+import { analytics } from '../../src/lib/analytics';
 import { useI18n } from '../../src/i18n';
 
 /**
@@ -91,6 +93,11 @@ export default function VoiceConsentScreen() {
         onPress={() => {
           accept.mutate(VOICE_CONSENT_VERSION, {
             onSuccess: () => {
+              // The version travels with the event for the same reason it travels
+              // with the acceptance: "they agreed" needs "to what".
+              analytics.capture(ANALYTICS_EVENTS.VOICE_CONSENT_ACCEPTED, {
+                consent_version: VOICE_CONSENT_VERSION,
+              });
               router.push('/voice/mic-test');
             },
             onError: (cause) => {

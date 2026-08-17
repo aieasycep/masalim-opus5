@@ -17,7 +17,9 @@ import {
   useTheme,
 } from '@masalim/ui';
 import { addressSchema, type AddressInput } from '@masalim/validation';
+import { ANALYTICS_EVENTS } from '@masalim/types';
 import { useAddresses, useCreateAddress } from '../../src/hooks/queries';
+import { analytics } from '../../src/lib/analytics';
 import { useOrderDraft } from '../../src/stores/order-draft';
 import { useI18n } from '../../src/i18n';
 
@@ -192,6 +194,15 @@ export default function OrderAddressScreen() {
         label={t('common.continue')}
         disabled={selectedId === null}
         onPress={() => {
+          // Whether the parent had a saved address to reuse, which is the only
+          // thing worth knowing about this step — never the address itself.
+          // `used_saved_address` is read off the selected id rather than off the
+          // create mutation's state: a parent can add an address and then pick a
+          // different one, and `createAddress.isSuccess` would still be true.
+          analytics.capture(ANALYTICS_EVENTS.CHECKOUT_ADDRESS_SUBMITTED, {
+            saved_count: addresses.length,
+            used_saved_address: addresses.some((address) => address.id === selectedId),
+          });
           router.push('/order/review');
         }}
       />

@@ -15,6 +15,8 @@ import {
   Text,
   useTheme,
 } from '@masalim/ui';
+import { ANALYTICS_EVENTS } from '@masalim/types';
+import { analytics } from '../../src/lib/analytics';
 import { api } from '../../src/lib/api';
 import {
   useNarration,
@@ -59,6 +61,8 @@ export default function PlayerScreen() {
   const [sleepMinutes, setSleepMinutes] = useState<number | null>(null);
   const [showText, setShowText] = useState(true);
   const lastSavedAt = useRef(0);
+  const playbackStartedFor = useRef<string | null>(null);
+  const completionReportedFor = useRef<string | null>(null);
 
   // Background playback and silent-switch behaviour. Without this, iOS stops the
   // narration the moment the screen locks.
@@ -99,6 +103,30 @@ export default function PlayerScreen() {
   useEffect(() => {
     if (status.didJustFinish) saveProgress(status.duration, true);
   }, [saveProgress, status.didJustFinish, status.duration]);
+
+  // Reported on the first transition into playing, not on every resume: pausing
+  // to answer a question and pressing play again is one listen, not two.
+  useEffect(() => {
+    if (!status.playing || !narration) return;
+    if (playbackStartedFor.current === narration.id) return;
+    playbackStartedFor.current = narration.id;
+    analytics.capture(ANALYTICS_EVENTS.PLAYBACK_STARTED, {
+      is_parent_voice: narration.voiceProfileId !== null,
+      duration_seconds: Math.round(narration.durationSeconds ?? status.duration),
+    });
+  }, [narration, status.duration, status.playing]);
+
+  // `didJustFinish` is the audio actually reaching the end — closing the screen
+  // part-way through is a save, never a completion.
+  useEffect(() => {
+    if (!status.didJustFinish || !narration) return;
+    if (completionReportedFor.current === narration.id) return;
+    completionReportedFor.current = narration.id;
+    analytics.capture(ANALYTICS_EVENTS.PLAYBACK_COMPLETED, {
+      is_parent_voice: narration.voiceProfileId !== null,
+      duration_seconds: Math.round(status.duration || (narration.durationSeconds ?? 0)),
+    });
+  }, [narration, status.didJustFinish, status.duration]);
 
   // Sleep timer: pauses rather than closing, so the story is still there.
   useEffect(() => {
@@ -309,6 +337,7 @@ export default function PlayerScreen() {
             onPress={() => {
               setSleepMinutes(minutes);
               setTimerSheetOpen(false);
+              analytics.capture(ANALYTICS_EVENTS.SLEEP_TIMER_SET, { minutes });
             }}
           />
         ))}

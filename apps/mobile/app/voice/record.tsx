@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
@@ -13,9 +13,10 @@ import {
   Text,
   useTheme,
 } from '@masalim/ui';
-import { VOICE_RECORDING } from '@masalim/types';
+import { ANALYTICS_EVENTS, VOICE_RECORDING } from '@masalim/types';
 import { useEnrolmentScript } from '../../src/hooks/queries';
 import { useVoiceEnrolment } from '../../src/stores/voice-enrolment';
+import { analytics } from '../../src/lib/analytics';
 import { useI18n } from '../../src/i18n';
 import { formatDuration } from '../../src/lib/format';
 import { VOICE_RECORDING_FORMAT } from '../../src/lib/recording';
@@ -45,6 +46,7 @@ export default function VoiceRecordScreen() {
   const recorder = useAudioRecorder(VOICE_RECORDING_OPTIONS);
   const state = useAudioRecorderState(recorder, 200);
   const [started, setStarted] = useState(false);
+  const completionReported = useRef(false);
 
   const seconds = (state.durationMillis ?? 0) / 1000;
   const longEnough = seconds >= VOICE_RECORDING.MIN_SECONDS;
@@ -61,10 +63,19 @@ export default function VoiceRecordScreen() {
     const uri = recorder.uri;
     if (!uri) return;
 
+    // finish() has two callers — the button and the ceiling effect — and they can
+    // both land for one recording. The guard is on the reporting rather than on
+    // the navigation, because pushing twice is harmless and counting twice is not.
+    if (completionReported.current) return;
+    completionReported.current = true;
+
     update({
       recordingUri: uri,
       durationSeconds: Math.round(recorded),
       contentType: VOICE_RECORDING_FORMAT.contentType,
+    });
+    analytics.capture(ANALYTICS_EVENTS.VOICE_RECORDING_COMPLETED, {
+      duration_seconds: Math.round(recorded),
     });
     router.push('/voice/review');
   }, [recorder, router, state.durationMillis, update]);
@@ -80,6 +91,7 @@ export default function VoiceRecordScreen() {
     await recorder.prepareToRecordAsync();
     recorder.record();
     setStarted(true);
+    analytics.capture(ANALYTICS_EVENTS.VOICE_RECORDING_STARTED);
   };
 
   const restart = async (): Promise<void> => {

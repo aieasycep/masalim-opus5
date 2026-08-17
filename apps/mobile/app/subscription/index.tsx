@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,8 +15,15 @@ import {
   useTheme,
   useToast,
 } from '@masalim/ui';
-import { ENTITLEMENTS, ENTITLEMENT_KEYS, QUOTA_KEYS, type QuotaKey } from '@masalim/types';
+import {
+  ANALYTICS_EVENTS,
+  ENTITLEMENTS,
+  ENTITLEMENT_KEYS,
+  QUOTA_KEYS,
+  type QuotaKey,
+} from '@masalim/types';
 import { useEntitlements, useRefreshSubscription } from '../../src/hooks/queries';
+import { analytics } from '../../src/lib/analytics';
 import { useI18n } from '../../src/i18n';
 
 const USAGE_LABELS: Readonly<Record<QuotaKey, string>> = {
@@ -49,6 +57,13 @@ export default function PaywallScreen() {
 
   const { data: entitlements, isPending } = useEntitlements();
   const refresh = useRefreshSubscription();
+
+  // No source property: every caller opens this screen with a bare
+  // `router.push('/subscription')` and passes nothing, so which locked feature
+  // sent the parent here is not knowable from inside it.
+  useEffect(() => {
+    analytics.capture(ANALYTICS_EVENTS.PAYWALL_VIEWED);
+  }, []);
 
   const premium = ENTITLEMENTS.PREMIUM;
   const isPremium = entitlements?.tier === 'PREMIUM';
@@ -160,7 +175,21 @@ export default function PaywallScreen() {
             loading={refresh.isPending}
             style={styles.cta}
             onPress={() => {
+              const wasPremium = isPremium;
               refresh.mutate(undefined, {
+                onSuccess: (subscription) => {
+                  // The store transaction happens outside the app, so a start is
+                  // only real once the re-read comes back Premium *and* the
+                  // account was not already Premium going in. Without that second
+                  // half, an existing member re-emits a start every time they tap.
+                  if (subscription.tier !== 'PREMIUM' || wasPremium) return;
+                  analytics.capture(ANALYTICS_EVENTS.SUBSCRIPTION_STARTED, {
+                    status: subscription.status,
+                    product_id: subscription.productId,
+                    in_trial: subscription.trialEndsAt !== null,
+                    will_renew: subscription.willRenew,
+                  });
+                },
                 onError: (cause) => {
                   toast.show({ message: errorCopy(cause).message, tone: 'error' });
                 },

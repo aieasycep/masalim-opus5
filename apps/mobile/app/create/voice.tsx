@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAudioPlayer } from 'expo-audio';
+import { ANALYTICS_EVENTS } from '@masalim/types';
 import { Avatar, EmptyState, OptionCard, Text } from '@masalim/ui';
+import { analytics } from '../../src/lib/analytics';
 import { useEntitlements, useNarrators } from '../../src/hooks/queries';
 import { useWizard } from '../../src/stores/wizard';
 import { useI18n } from '../../src/i18n';
@@ -47,6 +49,11 @@ export default function CreateVoiceStep() {
       title={t('storyCreate.step5Title')}
       canContinue={chosen !== null}
       onContinue={() => {
+        analytics.capture(ANALYTICS_EVENTS.STORY_CREATION_STEP_COMPLETED, {
+          step: 'voice',
+          step_index: 5,
+          voice_kind: draft.voiceProfileId ? 'parent' : 'system',
+        });
         router.push('/create/summary');
       }}
       footerNote={canUseParentVoice ? undefined : t('storyCreate.voicePremiumNote')}

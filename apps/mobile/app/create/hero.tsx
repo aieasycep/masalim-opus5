@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { HERO_TYPES, type HeroType } from '@masalim/types';
+import { ANALYTICS_EVENTS, HERO_TYPES, type HeroType } from '@masalim/types';
 import { Chip, ChipGroup, Input, OptionCard, Text } from '@masalim/ui';
+import { analytics } from '../../src/lib/analytics';
 import { useChildren } from '../../src/hooks/queries';
 import { useWizard } from '../../src/stores/wizard';
 import { useI18n } from '../../src/i18n';
@@ -40,6 +41,12 @@ export default function CreateHeroStep() {
       {...(child ? { subtitle: t('storyCreate.step2Subtitle', { name: child.name }) } : {})}
       canContinue={canContinue}
       onContinue={() => {
+        analytics.capture(ANALYTICS_EVENTS.STORY_CREATION_STEP_COMPLETED, {
+          step: 'hero',
+          step_index: 2,
+          hero_type: draft.heroType,
+          hero_is_child: heroIsChild,
+        });
         router.push('/create/theme');
       }}
     >

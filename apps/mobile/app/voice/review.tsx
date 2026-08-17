@@ -15,12 +15,25 @@ import {
   useTheme,
 } from '@masalim/ui';
 import { VOICE_CONSENT_VERSION } from '@masalim/validation';
-import { uploadFile } from '@masalim/api-client';
+import { ApiError, uploadFile } from '@masalim/api-client';
+import { ANALYTICS_EVENTS, ERROR_CODES } from '@masalim/types';
 import { useCreateVoice, useSubmitVoiceRecording } from '../../src/hooks/queries';
 import { useVoiceEnrolment } from '../../src/stores/voice-enrolment';
 import { api } from '../../src/lib/api';
+import { analytics } from '../../src/lib/analytics';
 import { useI18n } from '../../src/i18n';
 import { formatDuration } from '../../src/lib/format';
+
+/** The codes the server's quality control answers with, from `analyseVoiceSample`. */
+const QUALITY_REJECTION_CODES: readonly string[] = [
+  ERROR_CODES.AUDIO_TOO_SHORT,
+  ERROR_CODES.AUDIO_TOO_LONG,
+  ERROR_CODES.AUDIO_TOO_QUIET,
+  ERROR_CODES.AUDIO_TOO_NOISY,
+  ERROR_CODES.AUDIO_CLIPPED,
+  ERROR_CODES.AUDIO_MOSTLY_SILENT,
+  ERROR_CODES.AUDIO_FILE_CORRUPT,
+];
 
 /**
  * Listen back, then commit.
@@ -55,6 +68,10 @@ export default function VoiceReviewScreen() {
     setBusy(true);
     setError(null);
 
+    // Which of the three calls was in flight, so a failure is reported against
+    // the step it happened in rather than guessed from the code.
+    let phase: 'profile' | 'upload' | 'submit' = 'profile';
+
     try {
       // 1. The profile. Reused on a retry rather than creating a second one.
       const voiceProfileId =
@@ -70,6 +87,7 @@ export default function VoiceReviewScreen() {
       update({ voiceProfileId });
 
       // 2. The bytes. Survives a failed clone so the passage is read once.
+      phase = 'upload';
       const assetId =
         draft.assetId ??
         (await uploadFile(api, {
@@ -81,6 +99,7 @@ export default function VoiceReviewScreen() {
       update({ assetId });
 
       // 3. The clone job, under a key held for the whole enrolment.
+      phase = 'submit';
       const idempotencyKey = draft.idempotencyKey ?? Crypto.randomUUID();
       update({ idempotencyKey });
 
@@ -92,6 +111,26 @@ export default function VoiceReviewScreen() {
       router.replace({ pathname: '/voice/processing/[jobId]', params: { jobId: job.id } });
     } catch (cause) {
       // Quality control rejections land here too, already as friendly codes.
+      const code = cause instanceof ApiError ? cause.code : 'UNKNOWN';
+
+      if (QUALITY_REJECTION_CODES.includes(code)) {
+        analytics.capture(ANALYTICS_EVENTS.VOICE_RECORDING_REJECTED, {
+          reason_code: code,
+          duration_seconds: draft.durationSeconds,
+          owner_type: draft.ownerType,
+        });
+      } else if (phase === 'upload') {
+        analytics.capture(ANALYTICS_EVENTS.VOICE_UPLOAD_FAILED, {
+          error_code: code,
+          duration_seconds: draft.durationSeconds,
+        });
+      } else {
+        analytics.capture(ANALYTICS_EVENTS.VOICE_CREATION_FAILED, {
+          error_code: code,
+          owner_type: draft.ownerType,
+        });
+      }
+
       setError(errorCopy(cause).message);
     } finally {
       setBusy(false);

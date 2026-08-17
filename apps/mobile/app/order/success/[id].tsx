@@ -1,7 +1,10 @@
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card, Icon, LoadingState, Screen, Text, useTheme } from '@masalim/ui';
+import { ANALYTICS_EVENTS } from '@masalim/types';
 import { useOrder } from '../../../src/hooks/queries';
+import { analytics } from '../../../src/lib/analytics';
 import { useI18n } from '../../../src/i18n';
 
 /**
@@ -20,6 +23,26 @@ export default function OrderSuccessScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const { data: order, isPending } = useOrder(id ?? null);
+
+  useEffect(() => {
+    if (!order) return;
+
+    // The order's own recorded total, only converted to kuruş for reporting —
+    // the figure is the server's, never reassembled from lines here.
+    const [whole = '0', fraction = ''] = order.total.amount.split('.');
+    const amountMinor = Number(whole) * 100 + Number(fraction.padEnd(2, '0').slice(0, 2));
+
+    analytics.capture(ANALYTICS_EVENTS.PURCHASE_COMPLETED, {
+      amount_minor: amountMinor,
+      currency: order.total.currency,
+      quantity: order.quantity,
+      book_size: order.bookSize,
+      cover_type: order.coverType,
+    });
+    // Keyed on the order rather than the query result, which a refetch would
+    // replace and re-report.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.id]);
 
   if (isPending || !order) {
     return (

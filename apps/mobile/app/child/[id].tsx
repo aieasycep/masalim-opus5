@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { AGE_BAND_RULES, AGE_RANGES, type AgeRange } from '@masalim/types';
+import { AGE_BAND_RULES, AGE_RANGES, ANALYTICS_EVENTS, type AgeRange } from '@masalim/types';
 import { updateChildSchema } from '@masalim/validation';
 import {
   Button,
@@ -29,6 +29,7 @@ import {
 } from '../../src/hooks/queries';
 import { useSession } from '../../src/stores/session';
 import { useI18n } from '../../src/i18n';
+import { analytics } from '../../src/lib/analytics';
 import {
   CHILD_LIMITS,
   formatDateInput,
@@ -141,7 +142,15 @@ export default function ChildProfileScreen() {
     updateChild.mutate(
       { id, input: parsed.data },
       {
-        onSuccess: () => {
+        onSuccess: (updated) => {
+          analytics.capture(ANALYTICS_EVENTS.CHILD_UPDATED, {
+            age_band: updated.ageRange,
+            // 'birth' is a redacted key fragment, so the mode is reported as a
+            // source enum rather than a has_birth_date boolean.
+            age_source: ageMode === 'birthDate' ? 'date' : 'band',
+            interest_count: selectedSlugs.length,
+            custom_interest_count: customInterests.length,
+          });
           setDirty(false);
           toast.show({ message: t('child.saved'), tone: 'success' });
         },

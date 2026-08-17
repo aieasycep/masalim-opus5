@@ -3,10 +3,11 @@ import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys, watchJob, type ApiError } from '@masalim/api-client';
-import type { AIJobDto } from '@masalim/types';
+import { ANALYTICS_EVENTS, type AIJobDto } from '@masalim/types';
 import { Button, Icon, ProgressBar, Screen, Text, useTheme } from '@masalim/ui';
 import { http } from '../../../src/lib/api';
 import { useVoiceEnrolment } from '../../../src/stores/voice-enrolment';
+import { analytics } from '../../../src/lib/analytics';
 import { useI18n } from '../../../src/i18n';
 
 /**
@@ -39,6 +40,11 @@ export default function VoiceProcessingScreen() {
         void client.invalidateQueries({ queryKey: queryKeys.voices.all });
 
         if (settled.status === 'COMPLETED') {
+          analytics.capture(ANALYTICS_EVENTS.VOICE_CREATED, {
+            owner_type: draft.ownerType,
+            duration_seconds: draft.durationSeconds,
+          });
+
           const voiceId = settled.entityId ?? draft.voiceProfileId;
           if (voiceId) {
             router.replace({ pathname: '/voice/success/[id]', params: { id: voiceId } });
@@ -46,16 +52,25 @@ export default function VoiceProcessingScreen() {
           return;
         }
 
+        analytics.capture(ANALYTICS_EVENTS.VOICE_CREATION_FAILED, {
+          error_code: settled.errorCode ?? 'UNKNOWN',
+          owner_type: draft.ownerType,
+        });
+
         router.replace({
           pathname: '/voice/error',
           params: settled.errorCode ? { code: settled.errorCode } : {},
         });
       },
       onError: (cause: ApiError) => {
+        analytics.capture(ANALYTICS_EVENTS.VOICE_CREATION_FAILED, {
+          error_code: cause.code,
+          owner_type: draft.ownerType,
+        });
         router.replace({ pathname: '/voice/error', params: { code: cause.code } });
       },
     });
-  }, [client, draft.voiceProfileId, jobId, router]);
+  }, [client, draft.durationSeconds, draft.ownerType, draft.voiceProfileId, jobId, router]);
 
   const progress = job ? job.completedSteps / Math.max(1, job.totalSteps) : 0;
 

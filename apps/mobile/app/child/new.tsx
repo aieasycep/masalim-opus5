@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AGE_BAND_RULES, AGE_RANGES, type AgeRange } from '@masalim/types';
+import { AGE_BAND_RULES, AGE_RANGES, ANALYTICS_EVENTS, type AgeRange } from '@masalim/types';
 import { createChildSchema } from '@masalim/validation';
 import {
   Button,
@@ -17,6 +17,7 @@ import {
 import { useCreateChild, useInterests } from '../../src/hooks/queries';
 import { useSession } from '../../src/stores/session';
 import { useI18n } from '../../src/i18n';
+import { analytics } from '../../src/lib/analytics';
 import {
   CHILD_LIMITS,
   formatDateInput,
@@ -100,6 +101,17 @@ export default function NewChildScreen() {
     setError(null);
     createChild.mutate(parsed.data, {
       onSuccess: (child) => {
+        analytics.capture(ANALYTICS_EVENTS.CHILD_CREATED, {
+          // The band is reported from the saved child because in birthDate mode
+          // the server is the one that derives it.
+          age_band: child.ageRange,
+          // 'birth' is a redacted key fragment, so the mode is reported as a
+          // source enum rather than a has_birth_date boolean.
+          age_source: ageMode === 'birthDate' ? 'date' : 'band',
+          interest_count: selectedSlugs.length,
+          custom_interest_count: customInterests.length,
+          during_onboarding: false,
+        });
         // The parent added this child to make something for them; acting on
         // behalf of the sibling they just left is not what they meant.
         selectChild(child.id);

@@ -18,7 +18,9 @@ import {
   useTheme,
   useToast,
 } from '@masalim/ui';
-import { ILLUSTRATION_STYLES, type IllustrationStyle } from '@masalim/types';
+import { ANALYTICS_EVENTS, ILLUSTRATION_STYLES, type IllustrationStyle } from '@masalim/types';
+import { isApiError } from '@masalim/api-client';
+import { analytics } from '../../../src/lib/analytics';
 import {
   useCreateIllustrationSet,
   useIllustrationSets,
@@ -169,6 +171,12 @@ export default function IllustrateScreen() {
                           idempotencyKey: Crypto.randomUUID(),
                         },
                         {
+                          onSuccess: () => {
+                            analytics.capture(ANALYTICS_EVENTS.ILLUSTRATION_REGENERATED, {
+                              illustration_style: existing.style,
+                              illustration_kind: illustration.kind,
+                            });
+                          },
                           onError: (cause) => {
                             toast.show({ message: errorCopy(cause).message, tone: 'error' });
                           },
@@ -236,6 +244,9 @@ export default function IllustrateScreen() {
         style={styles.cta}
         onPress={() => {
           if (!storyId) return;
+          analytics.capture(ANALYTICS_EVENTS.ILLUSTRATION_GENERATION_STARTED, {
+            illustration_style: style,
+          });
           createSet.mutate(
             { storyId, input: { style, idempotencyKey: Crypto.randomUUID() } },
             {
@@ -246,6 +257,13 @@ export default function IllustrateScreen() {
                 });
               },
               onError: (cause) => {
+                // The request never became a job, so the set-level effect above
+                // will never see this one.
+                analytics.capture(ANALYTICS_EVENTS.ILLUSTRATION_GENERATION_FAILED, {
+                  illustration_style: style,
+                  error_code: isApiError(cause) ? cause.code : null,
+                  stage: 'request',
+                });
                 toast.show({ message: errorCopy(cause).message, tone: 'error' });
               },
             },

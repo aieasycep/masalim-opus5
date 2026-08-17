@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
@@ -21,7 +21,8 @@ import {
 } from '@masalim/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@masalim/api-client';
-import { AGE_BAND_RULES } from '@masalim/types';
+import { AGE_BAND_RULES, ANALYTICS_EVENTS } from '@masalim/types';
+import { analytics } from '../../../src/lib/analytics';
 import { api } from '../../../src/lib/api';
 import {
   useDeleteStory,
@@ -70,6 +71,18 @@ export default function StoryDetailScreen() {
     },
   });
 
+  useEffect(() => {
+    if (!story) return;
+    analytics.capture(ANALYTICS_EVENTS.STORY_OPENED, {
+      page_count: story.pages.length,
+      has_illustrations: story.hasIllustrations,
+      age_range: story.ageRange,
+    });
+    // Keyed on the story's identity, so a background refetch does not report a
+    // second open of the same story.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.id]);
+
   if (isPending) {
     return (
       <Screen scroll={false}>
@@ -109,7 +122,24 @@ export default function StoryDetailScreen() {
             accessibilityLabel={story.isFavourite ? t('story.unfavourite') : t('story.favourite')}
             color={story.isFavourite ? theme.colors.accent : undefined}
             onPress={() => {
-              toggleFavourite.mutate({ id: story.id, favourite: !story.isFavourite });
+              const favouriting = !story.isFavourite;
+              toggleFavourite.mutate(
+                { id: story.id, favourite: favouriting },
+                {
+                  // Reported on success, not on the tap. The mutation rolls back
+                  // when it fails, so counting the tap would count favourites
+                  // that the library does not actually contain. The registry has
+                  // no un-favourite event, so only the positive direction is
+                  // reported rather than smuggled in under a flag.
+                  onSuccess: () => {
+                    if (favouriting) {
+                      analytics.capture(ANALYTICS_EVENTS.STORY_FAVOURITED, {
+                        surface: 'story_detail',
+                      });
+                    }
+                  },
+                },
+              );
             }}
           />
         }
@@ -251,6 +281,9 @@ export default function StoryDetailScreen() {
         onConfirm={() => {
           deleteStory.mutate(story.id, {
             onSuccess: () => {
+              analytics.capture(ANALYTICS_EVENTS.STORY_DELETED, {
+                has_illustrations: story.hasIllustrations,
+              });
               setConfirmDelete(false);
               router.back();
             },

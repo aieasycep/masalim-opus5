@@ -5,7 +5,7 @@ import * as Crypto from 'expo-crypto';
 import { WebView } from 'react-native-webview';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys, watchJob, type ApiError } from '@masalim/api-client';
-import type { AIJobDto } from '@masalim/types';
+import { ANALYTICS_EVENTS, type AIJobDto } from '@masalim/types';
 import {
   Button,
   Card,
@@ -18,6 +18,7 @@ import {
   useTheme,
 } from '@masalim/ui';
 import { useBook, useBookRenders, useRenderBook } from '../../../src/hooks/queries';
+import { analytics } from '../../../src/lib/analytics';
 import { http } from '../../../src/lib/api';
 import { useI18n } from '../../../src/i18n';
 
@@ -67,6 +68,9 @@ export default function BookPreviewScreen() {
               ? errorCopy({ name: 'ApiError', code: settled.errorCode }).message
               : errorCopy(null).message,
           );
+        } else {
+          // The preview a parent can actually read, not the render they asked for.
+          analytics.capture(ANALYTICS_EVENTS.BOOK_PREVIEWED);
         }
       },
       onError: (cause: ApiError) => {
@@ -132,6 +136,9 @@ export default function BookPreviewScreen() {
               label={t('book.print')}
               disabled={!printReady}
               onPress={() => {
+                analytics.capture(ANALYTICS_EVENTS.CHECKOUT_STARTED, {
+                  page_count: book.pages.length,
+                });
                 router.push({
                   pathname: '/order/configure/[bookId]',
                   params: { bookId: book.id },

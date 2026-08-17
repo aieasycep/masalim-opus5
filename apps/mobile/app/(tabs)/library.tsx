@@ -14,7 +14,8 @@ import {
   StoryCard,
   useTheme,
 } from '@masalim/ui';
-import type { StorySummaryDto } from '@masalim/types';
+import { ANALYTICS_EVENTS, type StorySummaryDto } from '@masalim/types';
+import { analytics } from '../../src/lib/analytics';
 import { useStories, useToggleFavourite } from '../../src/hooks/queries';
 import { useDebouncedValue } from '../../src/hooks/use-debounced-value';
 import { useI18n } from '../../src/i18n';
@@ -139,7 +140,20 @@ export default function LibraryScreen() {
                 router.push({ pathname: '/story/[id]', params: { id: item.id } });
               }}
               onToggleFavourite={() => {
-                toggleFavourite.mutate({ id: item.id, favourite: !item.isFavourite });
+                const favouriting = !item.isFavourite;
+                toggleFavourite.mutate(
+                  { id: item.id, favourite: favouriting },
+                  {
+                    // On success rather than on the tap: this list is not updated
+                    // optimistically, so repeated taps before the refetch lands
+                    // would each read the same stale `isFavourite` and emit again.
+                    onSuccess: () => {
+                      if (favouriting) {
+                        analytics.capture(ANALYTICS_EVENTS.STORY_FAVOURITED, { surface: 'library' });
+                      }
+                    },
+                  },
+                );
               }}
               style={styles.card}
             />

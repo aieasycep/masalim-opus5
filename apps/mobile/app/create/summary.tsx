@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
-import { AGE_BAND_RULES } from '@masalim/types';
+import { AGE_BAND_RULES, ANALYTICS_EVENTS } from '@masalim/types';
+import { isApiError } from '@masalim/api-client';
 import type { CreateStoryInput } from '@masalim/validation';
 import { Card, Divider, Text } from '@masalim/ui';
+import { analytics } from '../../src/lib/analytics';
 import { useChildren, useCreateStory, useNarrators } from '../../src/hooks/queries';
 import { useWizard } from '../../src/stores/wizard';
 import { useI18n } from '../../src/i18n';
@@ -74,6 +76,16 @@ export default function CreateSummaryStep() {
       idempotencyKey,
     };
 
+    // Fired on the attempt rather than on acceptance: the gap between this and
+    // the job's outcome is the funnel step everything else is measured against.
+    analytics.capture(ANALYTICS_EVENTS.STORY_GENERATION_REQUESTED, {
+      hero_type: draft.heroType,
+      age_range: draft.ageRange,
+      duration_target: draft.durationTarget,
+      theme_count: draft.themes.length,
+      used_custom_idea: draft.customPrompt.trim().length > 0,
+    });
+
     createStory.mutate(input, {
       onSuccess: ({ story, job }) => {
         reset();
@@ -83,6 +95,12 @@ export default function CreateSummaryStep() {
         });
       },
       onError: (cause: unknown) => {
+        // The request never became a job, so no job event will ever report it.
+        // `error_code` keeps a quota refusal separable from a real failure.
+        analytics.capture(ANALYTICS_EVENTS.STORY_GENERATION_FAILED, {
+          error_code: isApiError(cause) ? cause.code : null,
+          stage: 'request',
+        });
         setError(errorCopy(cause).message);
       },
     });

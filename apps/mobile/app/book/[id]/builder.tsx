@@ -15,7 +15,9 @@ import {
   useTheme,
   useToast,
 } from '@masalim/ui';
+import { ANALYTICS_EVENTS } from '@masalim/types';
 import { useBook, useUpdateBookPage } from '../../../src/hooks/queries';
+import { analytics } from '../../../src/lib/analytics';
 import { useDebouncedValue } from '../../../src/hooks/use-debounced-value';
 import { useI18n } from '../../../src/i18n';
 import { SaveIndicator, type SaveState } from '../../../src/components/SaveIndicator';
@@ -59,12 +61,22 @@ export default function BookBuilderScreen() {
     const text = debouncedTexts[editing];
     if (text === undefined) return;
 
+    // The effect re-enters when `editing` changes, at which point the debounced
+    // map is still the previous page's snapshot. Comparing against what the
+    // server already holds is what keeps a page-to-page tap from counting as an
+    // edit that never happened.
+    const stored = book?.pages.find((page) => page.id === editing)?.text;
+    if (stored === text) return;
+
     setSaveState('saving');
     updatePage.mutate(
       { pageId: editing, input: { text } },
       {
         onSuccess: () => {
           setSaveState('saved');
+          // One event per autosaved page, which is what "editing happened" means
+          // on a screen with no save button.
+          analytics.capture(ANALYTICS_EVENTS.BOOK_EDITED, { part: 'page' });
         },
         onError: (cause) => {
           setSaveState('failed');

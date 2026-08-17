@@ -3,7 +3,9 @@ import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { signInSchema, type SignInInput } from '@masalim/validation';
+import { ANALYTICS_EVENTS } from '@masalim/types';
 import { Screen, ScreenHeader, Text } from '@masalim/ui';
+import { analytics } from '../../src/lib/analytics';
 import { api } from '../../src/lib/api';
 import { useSession } from '../../src/stores/session';
 import { useI18n } from '../../src/i18n';
@@ -20,6 +22,12 @@ export default function SignInScreen() {
     mutationFn: (values: SignInInput) => api.auth.signIn(values),
     onSuccess: async (session) => {
       await adopt(session);
+      // Whether returning parents are still mid-onboarding is the one thing this
+      // event can answer that a session count cannot.
+      analytics.capture(ANALYTICS_EVENTS.SIGN_IN_COMPLETED, {
+        method: 'email',
+        onboarding_completed: session.user.onboardingCompleted,
+      });
       router.replace(session.user.onboardingCompleted ? '/(tabs)' : '/(onboarding)/child');
     },
     onError: (cause: unknown) => {

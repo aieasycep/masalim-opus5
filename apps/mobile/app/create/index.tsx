@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Avatar, ConfirmDialog, OptionCard } from '@masalim/ui';
+import { ANALYTICS_EVENTS } from '@masalim/types';
+import { analytics } from '../../src/lib/analytics';
 import { useChildren } from '../../src/hooks/queries';
 import { useWizard } from '../../src/stores/wizard';
 import { useSession } from '../../src/stores/session';
@@ -31,6 +33,7 @@ export default function CreateChildStep() {
   useEffect(() => {
     if (askedAboutDraft) return;
     setAskedAboutDraft(true);
+    analytics.capture(ANALYTICS_EVENTS.STORY_CREATION_STARTED);
     if (hasProgress()) setOfferRestore(true);
     else if (selectedChildId) update({ childId: selectedChildId });
   }, [askedAboutDraft, hasProgress, selectedChildId, update]);
@@ -43,6 +46,11 @@ export default function CreateChildStep() {
         subtitle={t('storyCreate.step1Subtitle')}
         canContinue
         onContinue={() => {
+          analytics.capture(ANALYTICS_EVENTS.STORY_CREATION_STEP_COMPLETED, {
+            step: 'child',
+            step_index: 1,
+            for_child: draft.childId !== null,
+          });
           router.push('/create/hero');
         }}
       >

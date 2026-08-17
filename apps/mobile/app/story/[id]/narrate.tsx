@@ -17,7 +17,9 @@ import {
   Text,
   useToast,
 } from '@masalim/ui';
-import type { NarrationDto } from '@masalim/types';
+import { ANALYTICS_EVENTS, type NarrationDto } from '@masalim/types';
+import { isApiError } from '@masalim/api-client';
+import { analytics } from '../../../src/lib/analytics';
 import {
   useCreateNarration,
   useDeleteNarration,
@@ -70,6 +72,15 @@ export default function NarrateScreen() {
   const narrate = (voice: { voiceProfileId?: string; systemVoiceId?: string }): void => {
     if (!storyId) return;
 
+    const isParentVoice = Boolean(voice.voiceProfileId);
+
+    // The attempt, so the gap to `narration_created` shows refusals (quota,
+    // entitlement) that never became a narration.
+    analytics.capture(ANALYTICS_EVENTS.NARRATION_REQUESTED, {
+      is_parent_voice: isParentVoice,
+      existing_narration_count: narrations.length,
+    });
+
     createNarration.mutate(
       {
         storyId,
@@ -81,12 +92,19 @@ export default function NarrateScreen() {
       },
       {
         onSuccess: ({ job }) => {
+          analytics.capture(ANALYTICS_EVENTS.NARRATION_CREATED, {
+            is_parent_voice: isParentVoice,
+          });
           router.push({
             pathname: '/generating/[jobId]',
             params: { jobId: job.id, storyId },
           });
         },
         onError: (cause) => {
+          analytics.capture(ANALYTICS_EVENTS.NARRATION_FAILED, {
+            is_parent_voice: isParentVoice,
+            error_code: isApiError(cause) ? cause.code : null,
+          });
           toast.show({ message: errorCopy(cause).message, tone: 'error' });
         },
       },

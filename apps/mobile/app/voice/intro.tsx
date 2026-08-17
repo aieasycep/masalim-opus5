@@ -1,7 +1,10 @@
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Card, Icon, Screen, ScreenHeader, Text, useTheme } from '@masalim/ui';
+import { ANALYTICS_EVENTS } from '@masalim/types';
 import { useEntitlements } from '../../src/hooks/queries';
+import { analytics } from '../../src/lib/analytics';
 import { useI18n } from '../../src/i18n';
 
 /**
@@ -22,6 +25,10 @@ export default function VoiceIntroScreen() {
 
   const { data: entitlements } = useEntitlements();
   const isPremium = entitlements?.entitlements.parent_voice_clone ?? false;
+
+  useEffect(() => {
+    analytics.capture(ANALYTICS_EVENTS.VOICE_INTRO_VIEWED);
+  }, []);
 
   const points: Array<{ icon: 'clock' | 'volume' | 'microphone'; label: string }> = [
     { icon: 'clock', label: t('voice.introDuration') },

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import {
   AGE_BAND_RULES,
   AGE_RANGES,
+  ANALYTICS_EVENTS,
   FANTASY_LEVELS,
   HUMOUR_LEVELS,
   STORY_DURATIONS,
@@ -13,6 +14,7 @@ import {
 } from '@masalim/types';
 import { MAX_EDUCATIONAL_GOAL_LENGTH } from '@masalim/validation';
 import { Card, Chip, ChipGroup, Input, ListItem, OptionCard, Text } from '@masalim/ui';
+import { analytics } from '../../src/lib/analytics';
 import { useChildren } from '../../src/hooks/queries';
 import { useWizard } from '../../src/stores/wizard';
 import { useI18n } from '../../src/i18n';
@@ -60,6 +62,13 @@ export default function CreateSettingsStep() {
       footerNote={t('storyCreate.safetyNote')}
       onContinue={() => {
         if (ageRange) update({ ageRange });
+        analytics.capture(ANALYTICS_EVENTS.STORY_CREATION_STEP_COMPLETED, {
+          step: 'settings',
+          step_index: 4,
+          age_range: ageRange,
+          duration_target: draft.durationTarget,
+          advanced_opened: advancedOpen,
+        });
         router.push('/create/voice');
       }}
     >

@@ -1,8 +1,9 @@
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { STORY_THEMES } from '@masalim/types';
+import { ANALYTICS_EVENTS, STORY_THEMES } from '@masalim/types';
 import { MAX_CUSTOM_PROMPT_LENGTH } from '@masalim/validation';
 import { Chip, ChipGroup, Input, Text } from '@masalim/ui';
+import { analytics } from '../../src/lib/analytics';
 import { useWizard } from '../../src/stores/wizard';
 import { useI18n } from '../../src/i18n';
 import { WizardStep } from '../../src/components/WizardStep';
@@ -49,6 +50,14 @@ export default function CreateThemeStep() {
       subtitle={t('storyCreate.step3Subtitle')}
       canContinue={draft.themes.length > 0}
       onContinue={() => {
+        analytics.capture(ANALYTICS_EVENTS.STORY_CREATION_STEP_COMPLETED, {
+          step: 'theme',
+          step_index: 3,
+          theme_count: draft.themes.length,
+          // Whether the free-text box was used, never what was written in it —
+          // and not named `custom_prompt_used`, which redaction would strip.
+          used_custom_idea: draft.customPrompt.trim().length > 0,
+        });
         router.push('/create/settings');
       }}
     >

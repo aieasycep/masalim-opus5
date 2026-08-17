@@ -4,8 +4,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys, watchJob, type ApiError } from '@masalim/api-client';
-import type { AIJobDto } from '@masalim/types';
+import { ANALYTICS_EVENTS, ERROR_CODES, type AIJobDto } from '@masalim/types';
 import { Button, palette, ProgressBar, Text, useTheme } from '@masalim/ui';
+import { analytics } from '../../src/lib/analytics';
 import { http } from '../../src/lib/api';
 import { useI18n } from '../../src/i18n';
 
@@ -47,6 +48,53 @@ export default function GeneratingScreen() {
         onProgress: setJob,
         onSettled: (settled) => {
           setJob(settled);
+
+          // This screen also watches illustration and book jobs; only story
+          // generation belongs in the story funnel.
+          const isStoryJob = settled.type === 'STORY_GENERATION';
+          const jobSeconds = Math.round(
+            (Date.parse(settled.updatedAt) - Date.parse(settled.createdAt)) / 1000,
+          );
+
+          // Illustration sets settle here as well. Reporting from the
+          // illustrate screen could not work: it navigates here the moment a set
+          // is created, so it never sees a set go from working to finished.
+          if (settled.type === 'ILLUSTRATION_GENERATION') {
+            analytics.capture(
+              settled.status === 'COMPLETED'
+                ? ANALYTICS_EVENTS.ILLUSTRATION_GENERATION_COMPLETED
+                : ANALYTICS_EVENTS.ILLUSTRATION_GENERATION_FAILED,
+              {
+                error_code: settled.errorCode,
+                job_status: settled.status,
+                job_duration_seconds: jobSeconds,
+                attempts: settled.attempts,
+              },
+            );
+          }
+
+          if (isStoryJob) {
+            if (settled.status === 'COMPLETED') {
+              analytics.capture(ANALYTICS_EVENTS.STORY_GENERATED, {
+                job_duration_seconds: jobSeconds,
+                attempts: settled.attempts,
+              });
+            } else {
+              // A moderation refusal is a product outcome, not a breakage, and
+              // the two must never share a metric.
+              analytics.capture(
+                settled.errorCode === ERROR_CODES.STORY_CONTENT_NOT_SUITABLE
+                  ? ANALYTICS_EVENTS.STORY_REJECTED_BY_SAFETY
+                  : ANALYTICS_EVENTS.STORY_GENERATION_FAILED,
+                {
+                  error_code: settled.errorCode,
+                  job_status: settled.status,
+                  job_duration_seconds: jobSeconds,
+                  attempts: settled.attempts,
+                },
+              );
+            }
+          }
 
           if (settled.status === 'COMPLETED') {
             void client.invalidateQueries({ queryKey: queryKeys.stories.all });

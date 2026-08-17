@@ -25,7 +25,7 @@ export function AnalyticsGate(): null {
 
   useEffect(() => {
     if (!preferences) return;
-    analytics.setConsent(preferences.analyticsConsent);
+    analytics.resolveStoredConsent(preferences.analyticsConsent);
   }, [preferences]);
 
   useEffect(() => {

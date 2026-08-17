@@ -13,7 +13,9 @@ import {
   useTheme,
   useToast,
 } from '@masalim/ui';
+import { ANALYTICS_EVENTS } from '@masalim/types';
 import { useBook, useUpdateBook } from '../../../src/hooks/queries';
+import { analytics } from '../../../src/lib/analytics';
 import { useDebouncedValue } from '../../../src/hooks/use-debounced-value';
 import { useI18n } from '../../../src/i18n';
 import { SaveIndicator, type SaveState } from '../../../src/components/SaveIndicator';
@@ -83,6 +85,7 @@ export default function BookCoverScreen() {
       {
         onSuccess: () => {
           setSaveState('saved');
+          analytics.capture(ANALYTICS_EVENTS.BOOK_EDITED, { part: 'cover' });
         },
         onError: (cause) => {
           setSaveState('failed');

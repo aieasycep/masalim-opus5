@@ -3,6 +3,8 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Text } from '@masalim/ui';
 import { api } from '../lib/api';
+import { ANALYTICS_EVENTS } from '@masalim/types';
+import { analytics } from '../lib/analytics';
 import { useSession } from '../stores/session';
 import { useI18n } from '../i18n';
 
@@ -28,8 +30,24 @@ export function SocialAuthButtons({ disabled = false }: SocialAuthButtonsProps) 
   const [busy, setBusy] = useState<'apple' | 'google' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const finish = async (session: Awaited<ReturnType<typeof api.auth.signIn>>): Promise<void> => {
+  const finish = async (
+    session: Awaited<ReturnType<typeof api.auth.signIn>>,
+    method: 'apple' | 'google',
+  ): Promise<void> => {
     await adopt(session);
+
+    // Reported with the same events as the email path and a different `method`.
+    // Leaving these silent while email carries method:'email' would make the
+    // provider split look like a preference for email rather than a gap.
+    // Onboarding not yet completed is how a first sign-in is distinguished from
+    // a returning one; the server decides which this was.
+    analytics.capture(
+      session.user.onboardingCompleted
+        ? ANALYTICS_EVENTS.SIGN_IN_COMPLETED
+        : ANALYTICS_EVENTS.SIGN_UP_COMPLETED,
+      { method, onboarding_completed: session.user.onboardingCompleted },
+    );
+
     router.replace(
       session.user.onboardingCompleted ? '/(tabs)' : '/(onboarding)/child',
     );
@@ -62,6 +80,7 @@ export function SocialAuthButtons({ disabled = false }: SocialAuthButtonsProps) 
           credential.identityToken,
           fullName.length > 0 ? fullName : undefined,
         ),
+        'apple',
       );
     } catch (cause) {
       // A cancelled sheet is not a failure worth showing.
@@ -85,7 +104,7 @@ export function SocialAuthButtons({ disabled = false }: SocialAuthButtonsProps) 
         throw new Error('Google returned no id token');
       }
 
-      await finish(await api.auth.signInWithGoogle(idToken));
+      await finish(await api.auth.signInWithGoogle(idToken), 'google');
     } catch (cause) {
       if (isCancellation(cause)) return;
       setError(errorCopy(cause).message);

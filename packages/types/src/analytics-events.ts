@@ -3,6 +3,26 @@
  *
  * Names live here so they cannot drift between mobile and backend, and so a
  * provider swap (PostHog, Firebase, Mixpanel) never touches call sites.
+ *
+ * Two limits are worth knowing before trusting a number from this set.
+ *
+ * **Nothing before sign-in is measurable.** Consent is stored per account and
+ * read from the server, so a device with no session has no decision to honour
+ * and captures nothing. `ONBOARDING_STARTED` is therefore not emitted by the
+ * app at all: on a first run it would be dropped, and the only case where it
+ * *would* send is a signed-out relaunch by an existing consenting parent —
+ * which counts relaunches, not people starting onboarding. A number that only
+ * appears when it is wrong is worse than an absent one. Measuring acquisition
+ * would mean asking for analytics consent before a parent has seen the product,
+ * which is not a trade this product makes.
+ *
+ * **Generation outcomes depend on a screen staying open.** `STORY_GENERATED`,
+ * `STORY_GENERATION_FAILED`, `STORY_REJECTED_BY_SAFETY` and the illustration
+ * equivalents are emitted by the client watching the job settle, so an outcome
+ * that lands after the parent leaves the app is never reported. Completion rates
+ * from these events are therefore a floor, not a measurement. Emitting them from
+ * the worker that finishes the job is the fix, and is why this registry is
+ * dependency-free enough to import from the API.
  */
 export const ANALYTICS_EVENTS = {
   ONBOARDING_STARTED: 'onboarding_started',

@@ -22,9 +22,14 @@ import {
   useTheme,
   useToast,
 } from '@masalim/ui';
-import type { VoiceProfileDto, VoiceProfileStatus } from '@masalim/types';
+import {
+  ANALYTICS_EVENTS,
+  type VoiceProfileDto,
+  type VoiceProfileStatus,
+} from '@masalim/types';
 import { useDeleteVoice, useRenameVoice, useVoices } from '../../src/hooks/queries';
 import { useVoiceEnrolment } from '../../src/stores/voice-enrolment';
+import { analytics } from '../../src/lib/analytics';
 import { useI18n } from '../../src/i18n';
 
 const STATUS_LABEL: Readonly<Record<VoiceProfileStatus, string>> = {
@@ -274,6 +279,11 @@ export default function VoiceStudioScreen() {
           if (!target) return;
           remove.mutate(target.id, {
             onSuccess: () => {
+              analytics.capture(ANALYTICS_EVENTS.VOICE_DELETED, {
+                owner_type: target.ownerType,
+                status: target.status,
+                source: 'studio',
+              });
               setDeleting(null);
               toast.show({ message: t('voice.deleted') });
             },

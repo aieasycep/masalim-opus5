@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AGE_RANGES, type AgeRange } from '@masalim/types';
+import { AGE_RANGES, ANALYTICS_EVENTS, type AgeRange } from '@masalim/types';
 import {
   Button,
   Chip,
@@ -16,6 +16,7 @@ import { AGE_BAND_RULES } from '@masalim/types';
 import { useCreateChild, useInterests } from '../../src/hooks/queries';
 import { useSession } from '../../src/stores/session';
 import { useI18n } from '../../src/i18n';
+import { analytics } from '../../src/lib/analytics';
 import { api } from '../../src/lib/api';
 
 const MAX_INTERESTS = 8;
@@ -87,10 +88,24 @@ export default function ChildProfileScreen() {
       {
         onSuccess: async (child) => {
           selectChild(child.id);
+          analytics.capture(ANALYTICS_EVENTS.CHILD_CREATED, {
+            age_band: child.ageRange,
+            // 'birth' is a redacted key fragment, so the mode is reported as a
+            // source enum rather than a has_birth_date boolean.
+            age_source: 'band',
+            interest_count: selectedSlugs.length,
+            custom_interest_count: customInterests.length,
+            during_onboarding: true,
+          });
           // Marking onboarding complete is what lets the gate stop redirecting
           // back here on every launch.
           const user = await api.users.completeOnboarding().catch(() => null);
-          if (user) setUser(user);
+          if (user) {
+            setUser(user);
+            // Only on the server confirming it: a failed call leaves the parent
+            // still in onboarding whatever the router does next.
+            analytics.capture(ANALYTICS_EVENTS.ONBOARDING_COMPLETED);
+          }
           router.replace('/(tabs)');
         },
         onError: (cause: unknown) => {

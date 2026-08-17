@@ -3,7 +3,9 @@ import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { signUpSchema, type SignUpInput } from '@masalim/validation';
+import { ANALYTICS_EVENTS } from '@masalim/types';
 import { Screen, ScreenHeader, Text } from '@masalim/ui';
+import { analytics } from '../../src/lib/analytics';
 import { api } from '../../src/lib/api';
 import { useSession } from '../../src/stores/session';
 import { useI18n } from '../../src/i18n';
@@ -22,6 +24,7 @@ export default function SignUpScreen() {
     mutationFn: (values: SignUpInput) => api.auth.signUp(values),
     onSuccess: async (session) => {
       await adopt(session);
+      analytics.capture(ANALYTICS_EVENTS.SIGN_UP_COMPLETED, { method: 'email' });
       // Every screen past here assumes a child exists, so that is the next step.
       router.replace('/(onboarding)/child');
     },
