@@ -14,6 +14,7 @@ import {
   RETENTION_QUEUE_NAME,
   isRetentionJobName,
 } from './retention.constants';
+import { shouldRunWorkers } from '../../core/queue/role';
 
 /**
  * Runs the retention passes.
@@ -40,7 +41,7 @@ export class RetentionWorkerService implements OnApplicationBootstrap, OnModuleD
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
-    if (process.env.MASALIM_ROLE !== 'worker') return;
+    if (!shouldRunWorkers()) return;
     await this.start();
   }
 

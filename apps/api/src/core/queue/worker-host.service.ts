@@ -16,6 +16,7 @@ import {
   type JobProcessor,
   type JobStepReporter,
 } from './queue.constants';
+import { shouldRunWorkers } from './role';
 
 /**
  * Runs the registered job processors.
@@ -36,7 +37,7 @@ export class WorkerHostService implements OnApplicationBootstrap, OnModuleDestro
   ) {}
 
   onApplicationBootstrap(): void {
-    if (process.env.MASALIM_ROLE !== 'worker') return;
+    if (!shouldRunWorkers()) return;
     this.start();
   }
 
