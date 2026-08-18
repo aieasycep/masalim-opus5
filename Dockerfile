@@ -73,11 +73,13 @@ RUN chown -R node:node /app
 USER node
 
 EXPOSE 3000
-# Readiness rather than liveness: the API answers /health/ready only once its
-# database and Redis connections are actually usable, which is what an
-# orchestrator should wait for before sending traffic.
+# Readiness rather than liveness, and the body rather than the status code:
+# /health/ready answers 200 whether or not its probes passed, reporting
+# "degraded" in the payload instead of failing the request. Checking `r.ok`
+# would therefore call a container healthy while its database was unreachable,
+# and an orchestrator would route traffic straight at it.
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=4 \
-  CMD node -e "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:3000/health/ready').then(r=>r.json()).then(b=>process.exit(b.status==='ok'?0:1)).catch(()=>process.exit(1))"
 WORKDIR /app/apps/api
 CMD ["node", "dist/main.js"]
 
