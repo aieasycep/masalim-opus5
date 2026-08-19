@@ -42,9 +42,17 @@ jobs:
           fi
 
           # Generous timeout on purpose: a cold start is exactly what this is
-          # here to absorb, so a slow answer is success, not failure.
-          code=$(curl -sS -o /tmp/ready.json -w '%{http_code}' --max-time 90 \
-            "${API_URL%/}/health/ready" || echo 000)
+          # here to absorb, so a slow answer is success, not failure. 90 s was
+          # not generous enough — GitHub's scheduler drifts, a gap stretched to
+          # 45 minutes, and waking from that deep a sleep timed out and reported
+          # the deploy as down when it was merely slow.
+          #
+          # `|| echo` is deliberately absent: curl's own -w prints 000 when the
+          # request never completes, and appending another made the log say
+          # "HTTP 000000". `set -e` is off for this line because a non-zero curl
+          # exit is an outcome to report, not a reason to stop.
+          code=$(curl -sS -o /tmp/ready.json -w '%{http_code}' --max-time 150 \
+            "${API_URL%/}/health/ready") || true
 
           echo "HTTP $code"
           cat /tmp/ready.json 2>/dev/null || true
