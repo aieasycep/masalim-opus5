@@ -1,5 +1,9 @@
 # Masalım — staging on Render's free tier.
 #
+# Postgres is NOT provisioned here. The database lives on an external managed
+# service — the connection string is set by hand in the dashboard — because a
+# free Render database has a fixed lifetime and the data outlives it.
+#
 # One web service does two jobs: it serves HTTP and runs the BullMQ workers in
 # the same process (MASALIM_ROLE=all, read in apps/api/src/core/queue/role.ts).
 # That is not how this should be deployed for real — a book render occupies the
@@ -103,10 +107,11 @@ services:
       # not downloaded and book PDF rendering is the one flow that fails here.
       - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
         value: '1'
+      # Set by hand in the dashboard, because the database lives outside Render.
+      # Use the connection string on port 5432 — a transaction pooler on 6543
+      # cannot run migrations, and this service runs them at start-up.
       - key: DATABASE_URL
-        fromDatabase:
-          name: masalim-db
-          property: connectionString
+        sync: false
       - key: REDIS_URL
         fromService:
           type: keyvalue
@@ -171,13 +176,3 @@ services:
     # reach the queue, and the free instance has no password on its internal URL.
     ipAllowList: []
 
-databases:
-  - name: masalim-db
-    databaseName: masalim
-    user: masalim
-    plan: free
-    region: frankfurt
-    # Closed to the internet by default. The free tier has no shell, so seeding
-    # and inspection happen over the external URL — add one address in the
-    # dashboard while you need it, and take it out again afterwards.
-    ipAllowList: []
