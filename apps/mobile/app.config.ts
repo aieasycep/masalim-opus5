@@ -27,10 +27,9 @@ const config: ExpoConfig = {
    */
   platforms: ['ios', 'android'],
 
-  splash: {
-    backgroundColor: '#1A0F3C',
-    resizeMode: 'contain',
-  },
+  // Drawn by scripts/generate-app-icons.py, not exported by hand, so the mark
+  // can be changed by editing proportions rather than by opening a design tool.
+  icon: './assets/icon.png',
 
   ios: {
     bundleIdentifier: 'app.masalim.ios',
@@ -49,7 +48,12 @@ const config: ExpoConfig = {
 
   android: {
     package: 'app.masalim.android',
-    adaptiveIcon: { backgroundColor: '#7C5CBF' },
+    adaptiveIcon: {
+      // Android crops this to whatever shape the launcher wants, so the mark is
+      // drawn well inside the guaranteed-visible middle.
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#7C5CBF',
+    },
     permissions: ['RECORD_AUDIO', 'READ_MEDIA_IMAGES', 'POST_NOTIFICATIONS'],
     edgeToEdgeEnabled: true,
   },
@@ -72,7 +76,19 @@ const config: ExpoConfig = {
           'Çocuğunun profil fotoğrafını seçebilmen için galerine erişmemiz gerekiyor.',
       },
     ],
-    ['expo-splash-screen', { backgroundColor: '#1A0F3C', resizeMode: 'contain' }],
+    // `image` is not optional in practice: the plugin writes a values.xml that
+    // references drawable/splashscreen_logo whether or not one was supplied, and
+    // the Android resource linker then fails the release build on a name it
+    // cannot resolve. Colours alone are not a configuration.
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/splash-icon.png',
+        backgroundColor: '#1A0F3C',
+        resizeMode: 'contain',
+        imageWidth: 200,
+      },
+    ],
   ],
 
   experiments: { typedRoutes: true },
