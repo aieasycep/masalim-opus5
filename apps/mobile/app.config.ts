@@ -78,6 +78,15 @@ const config: ExpoConfig = {
   experiments: { typedRoutes: true },
 
   extra: {
+    // How EAS knows which project on expo.dev a build belongs to. A static
+    // app.json would carry it as a literal; this config is generated, so EAS
+    // cannot write it back and it arrives from the environment instead. Left
+    // out entirely when unset, because `expo start` needs no account and an
+    // empty string here would look like a real id and fail later with a worse
+    // message.
+    ...(process.env.EAS_PROJECT_ID
+      ? { eas: { projectId: process.env.EAS_PROJECT_ID } }
+      : {}),
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000',
     appEnv: process.env.EXPO_PUBLIC_APP_ENV ?? 'development',
     revenueCatIosKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '',

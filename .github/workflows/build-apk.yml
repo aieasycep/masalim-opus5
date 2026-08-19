@@ -1,0 +1,113 @@
+name: Build an Android APK
+
+# Started by hand from the Actions tab, because a build costs minutes on a free
+# EAS plan and there is no reason to spend them on every commit.
+#
+# The build itself runs on Expo's infrastructure; this job only installs the
+# workspace, hands EAS the project and waits. That indirection is the point:
+# an Android build needs the SDK and the AndroidX artifacts from dl.google.com,
+# and neither this runner nor the environment this repository is developed in
+# is required to have them.
+#
+# Two things have to exist before it will work, both one-off:
+#
+#   EXPO_TOKEN       — repository *secret*. expo.dev → account settings →
+#                      access tokens. It authenticates as your account, so it
+#                      belongs in secrets and nowhere else.
+#   EAS_PROJECT_ID   — repository *variable*. The id of the project on
+#                      expo.dev. Not a secret, and app.config.ts reads it from
+#                      the environment because a generated config is one EAS
+#                      cannot write back into.
+#
+# The APK's API address comes from eas.json's `preview` profile and is compiled
+# into the binary. Changing where the app points means a new build, not a new
+# setting.
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'eas.json build profile'
+        type: choice
+        options: [preview, development]
+        default: preview
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Check the one-off setup is done
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+        run: |
+          missing=
+          [ -z "$EXPO_TOKEN" ] && missing="$missing EXPO_TOKEN(secret)"
+          [ -z "$EAS_PROJECT_ID" ] && missing="$missing EAS_PROJECT_ID(variable)"
+          if [ -n "$missing" ]; then
+            echo "Missing:$missing"
+            echo "Set them under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+
+      # The app imports three workspace packages whose package.json points at
+      # dist/, which is not committed. EAS runs this same command on its own
+      # builder through the eas-build-post-install hook; running it here as well
+      # means a bundling problem surfaces in this log rather than in a queue.
+      - run: pnpm exec turbo run build --filter='@masalim/mobile^...'
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build
+        working-directory: apps/mobile
+        env:
+          EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+        run: |
+          # --wait so the job's own success means an installable file exists,
+          # rather than only that the build was accepted into the queue.
+          eas build \
+            --platform android \
+            --profile "${{ inputs.profile }}" \
+            --non-interactive \
+            --wait \
+            --json > build.json
+
+          cat build.json
+
+          url=$(node -e "
+            const b = JSON.parse(require('fs').readFileSync('build.json','utf8'));
+            const first = Array.isArray(b) ? b[0] : b;
+            console.log(first?.artifacts?.buildUrl ?? '');
+          ")
+
+          if [ -z "$url" ]; then
+            echo "The build finished but reported no artifact URL; see the JSON above."
+            exit 1
+          fi
+
+          {
+            echo "## APK ready"
+            echo
+            echo "[Download]($url)"
+            echo
+            echo "Open this link on the phone. Android will ask for permission to"
+            echo "install from an unknown source — that is expected for a build"
+            echo "that did not come from the Play Store."
+          } >> "$GITHUB_STEP_SUMMARY"
