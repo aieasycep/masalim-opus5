@@ -6,19 +6,14 @@ import { Button, LoadingState, Screen, Text } from '@masalim/ui';
 import { useSession } from '../stores/session';
 import { useAppConfig } from '../hooks/queries';
 import { useI18n } from '../i18n';
+import { decideGate } from '../lib/app-gate';
 
 /**
  * Decides which world the app is in before any screen renders.
  *
- * Three gates, in order of severity:
- *
- *  1. A build below the supported floor cannot continue at all — it is talking
- *     to an API it no longer understands, and letting it through produces
- *     failures nobody can diagnose (§88).
- *  2. A signed-out parent belongs in onboarding, and a signed-in one must not be
- *     able to navigate back into it.
- *  3. A signed-in parent with no children yet goes to the child profile step,
- *     because every other screen in the app assumes one exists.
+ * The decision itself is `decideGate`, kept separate and tested; this component
+ * is only the wiring — where each input comes from, and what each answer looks
+ * like on screen.
  *
  * Redirects run in an effect rather than during render: navigating while the
  * router is still mounting is how "attempted to navigate before mounting"
@@ -32,30 +27,27 @@ export function AppGate({ children }: { children: ReactNode }) {
   const { data: config, isPending } = useAppConfig();
   const { t } = useI18n();
 
-  const inOnboarding = segments[0] === '(onboarding)' || segments[0] === '(auth)';
-  const updateRequired = config?.update?.updateRequired ?? false;
+  const decision = decideGate({
+    configPending: isPending,
+    updateRequired: config?.update?.updateRequired ?? false,
+    sessionStatus: status,
+    inOnboarding: segments[0] === '(onboarding)' || segments[0] === '(auth)',
+    onboardingCompleted: user?.onboardingCompleted ?? false,
+  });
+
+  const destination = decision.kind === 'redirect' ? decision.to : null;
 
   useEffect(() => {
-    if (updateRequired || isPending) return;
+    if (destination !== null) router.replace(destination);
+  }, [destination, router]);
 
-    if (status === 'anonymous' && !inOnboarding) {
-      router.replace('/(onboarding)/welcome');
-      return;
-    }
-
-    if (status === 'authenticated' && inOnboarding && user?.onboardingCompleted) {
-      router.replace('/(tabs)');
-    }
-  }, [inOnboarding, isPending, router, status, updateRequired, user?.onboardingCompleted]);
-
-  if (updateRequired) {
+  if (decision.kind === 'update-required') {
     return <ForcedUpdate />;
   }
 
-  // The launch config has not answered yet. Rendering the app first and then
-  // yanking it away if an update is required would be worse than a moment of
-  // quiet.
-  if (isPending && status === 'loading') {
+  // Also while a redirect is pending: the effect runs after this render, and
+  // the screen it is leaving must not be allowed to paint in the meantime.
+  if (decision.kind === 'wait' || decision.kind === 'redirect') {
     return (
       <Screen scroll={false}>
         <LoadingState label={t('common.loading')} />
