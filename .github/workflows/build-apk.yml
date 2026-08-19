@@ -9,15 +9,12 @@ name: Build an Android APK
 # and neither this runner nor the environment this repository is developed in
 # is required to have them.
 #
-# Two things have to exist before it will work, both one-off:
+# One thing has to exist before it will work, and only once:
 #
-#   EXPO_TOKEN       — repository *secret*. expo.dev → account settings →
-#                      access tokens. It authenticates as your account, so it
-#                      belongs in secrets and nowhere else.
-#   EAS_PROJECT_ID   — repository *variable*. The id of the project on
-#                      expo.dev. Not a secret, and app.config.ts reads it from
-#                      the environment because a generated config is one EAS
-#                      cannot write back into.
+#   EXPO_TOKEN — repository *secret*. expo.dev → account settings → access
+#                tokens. It authenticates as your account, so it belongs in
+#                secrets and nowhere else. The project id is committed in
+#                app.config.ts and needs nothing here.
 #
 # The APK's API address comes from eas.json's `preview` profile and is compiled
 # into the binary. Changing where the app points means a new build, not a new
@@ -51,14 +48,12 @@ jobs:
       - name: Check the one-off setup is done
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
         run: |
-          missing=
-          [ -z "$EXPO_TOKEN" ] && missing="$missing EXPO_TOKEN(secret)"
-          [ -z "$EAS_PROJECT_ID" ] && missing="$missing EAS_PROJECT_ID(variable)"
-          if [ -n "$missing" ]; then
-            echo "Missing:$missing"
-            echo "Set them under Settings → Secrets and variables → Actions."
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN is not set."
+            echo "Add it under Settings → Secrets and variables → Actions →"
+            echo "Secrets. Create the token at expo.dev → Settings → Access"
+            echo "tokens."
             exit 1
           fi
 
@@ -77,8 +72,6 @@ jobs:
 
       - name: Build
         working-directory: apps/mobile
-        env:
-          EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
         run: |
           # --wait so the job's own success means an installable file exists,
           # rather than only that the build was accepted into the queue.
