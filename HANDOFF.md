@@ -18,7 +18,7 @@ Honest completion, by the measure that matters:
 | | |
 | --- | --- |
 | Code written | ~90% |
-| Testable by a person | ~40% — the database step is done |
+| Testable by a person | ~55% — database and API are deployed |
 | Ready for real users | ~15% |
 
 ## The deploy, step by step
@@ -35,10 +35,12 @@ on its mock, so the whole product is clickable before any API key exists.
       IPv6-only and is unreachable from most networks. Port 6543 is a
       transaction pooler and cannot run migrations; this schema declares no
       `directUrl`, so one string does both jobs.
-- [ ] **2. Render.** `render.yaml` is a blueprint for a free web service plus a
-      Key Value instance. It deliberately does *not* provision Postgres —
-      `DATABASE_URL` is set by hand to the Supabase string above. Never built or
-      run; expect to fix something on the first attempt.
+- [x] **2. Render — done.** `https://masalim-api-1do8.onrender.com`, region
+      frankfurt, free plan, one process serving HTTP and the queue
+      (`MASALIM_ROLE=all`). The blueprint applied unchanged on the first
+      attempt. `/health/ready` answers `ok` with Postgres and Redis both up.
+      `DATABASE_URL` is set by hand in the dashboard; the three other
+      dashboard-set variables are deliberately blank.
 - [ ] **3. Storage.** Supabase Storage or Cloudflare R2 through the existing S3
       adapter. `STORAGE_ENDPOINT` is where the API uploads; `STORAGE_PUBLIC_URL`
       is where the phone downloads. Confusing them produces stories that
