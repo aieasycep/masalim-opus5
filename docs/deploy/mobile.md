@@ -67,7 +67,15 @@ git clone <this repository> masalim
 cd masalim
 corepack enable
 pnpm install
+pnpm exec turbo run build --filter='@masalim/mobile^...'
 ```
+
+That last line is easy to skip and not optional. The app imports
+`@masalim/types`, `@masalim/validation` and `@masalim/localization`, whose
+`package.json` files point at a `dist/` directory that `pnpm install` does not
+produce. Without it Metro bundles for ten seconds and then fails with *Unable to
+resolve "@masalim/validation"* — which reads like a missing dependency rather
+than an unbuilt one.
 
 ---
 
@@ -335,6 +343,11 @@ cd masalim
 corepack enable
 pnpm install
 ```
+
+On EAS the same workspace build is handled for you: `apps/mobile/package.json`
+declares an `eas-build-post-install` script that runs it on the builder, because
+`dist/` is not committed and the builder starts from the repository as git has
+it.
 
 **2. Install the EAS CLI.** Version 22.0.0 was current on 14 August 2026.
 

@@ -12,7 +12,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint app src",
     "test": "vitest run",
-    "clean": "rm -rf dist .expo .turbo *.tsbuildinfo"
+    "clean": "rm -rf dist .expo .turbo *.tsbuildinfo",
+    "eas-build-post-install": "cd ../.. && pnpm exec turbo run build --filter='@masalim/mobile^...'"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
