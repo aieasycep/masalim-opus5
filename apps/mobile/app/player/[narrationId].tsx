@@ -15,7 +15,7 @@ import {
   Text,
   useTheme,
 } from '@masalim/ui';
-import { ANALYTICS_EVENTS } from '@masalim/types';
+import { ANALYTICS_EVENTS, type NarrationDto } from '@masalim/types';
 import { analytics } from '../../src/lib/analytics';
 import { api } from '../../src/lib/api';
 import {
@@ -44,16 +44,63 @@ const PROGRESS_SAVE_INTERVAL_MS = 10_000;
  * yerden devam et" tomorrow. Audio is configured to keep playing when the screen
  * locks — the whole point is that the child listens as they drift off.
  */
+/**
+ * Waits for the narration, then hands a ready one to the screen that plays it.
+ *
+ * The split is what guarantees `Player` mounts its audio hook once, against a
+ * source that exists. Fetching and playing in one component meant the player
+ * was created empty and replaced the moment the data arrived, which released a
+ * native object other effects were still holding.
+ */
 export default function PlayerScreen() {
-  const router = useRouter();
   const { t, errorCopy } = useI18n();
   const { narrationId } = useLocalSearchParams<{ narrationId: string }>();
-
   const { data: narration, isPending, isError, refetch } = useNarration(narrationId ?? null);
-  const { data: story } = useStory(narration?.storyId ?? null);
-  const { data: segments = [] } = useNarrationSegments(narrationId ?? null);
 
-  const player = useAudioPlayer(narration?.audioUrl ? { uri: narration.audioUrl } : null);
+  if (isPending) {
+    return (
+      <NightScreen>
+        <LoadingState label={t('common.loading')} />
+      </NightScreen>
+    );
+  }
+
+  // No audio is not a loading state. A narration can be READY in the database
+  // while its file is unreachable — free hosting keeps uploads on a disk that
+  // does not survive a restart — and rendering transport controls over nothing
+  // leaves a parent pressing play at silence.
+  if (isError || !narration || !narration.audioUrl) {
+    return (
+      <NightScreen>
+        <ErrorState
+          title={errorCopy(null).title}
+          retryLabel={t('common.retry')}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </NightScreen>
+    );
+  }
+
+  return <Player narration={narration} audioUrl={narration.audioUrl} />;
+}
+
+function Player({
+  narration,
+  audioUrl,
+}: {
+  narration: NarrationDto;
+  audioUrl: string;
+}) {
+  const router = useRouter();
+  const { t } = useI18n();
+  const narrationId = narration.id;
+
+  const { data: story } = useStory(narration.storyId);
+  const { data: segments = [] } = useNarrationSegments(narrationId);
+
+  const player = useAudioPlayer({ uri: audioUrl });
   const status = useAudioPlayerStatus(player);
 
   const [speedSheetOpen, setSpeedSheetOpen] = useState(false);
@@ -61,6 +108,9 @@ export default function PlayerScreen() {
   const [sleepMinutes, setSleepMinutes] = useState<number | null>(null);
   const [showText, setShowText] = useState(true);
   const lastSavedAt = useRef(0);
+  // The last position we saw, mirrored out of the status so it can be read
+  // after the player it came from is gone. See the unmount save below.
+  const lastPosition = useRef(0);
   const playbackStartedFor = useRef<string | null>(null);
   const completionReportedFor = useRef<string | null>(null);
 
@@ -85,6 +135,10 @@ export default function PlayerScreen() {
   );
 
   useEffect(() => {
+    lastPosition.current = status.currentTime;
+  }, [status.currentTime]);
+
+  useEffect(() => {
     if (!status.playing) return;
     const now = Date.now();
     if (now - lastSavedAt.current < PROGRESS_SAVE_INTERVAL_MS) return;
@@ -93,11 +147,20 @@ export default function PlayerScreen() {
   }, [saveProgress, status.currentTime, status.playing]);
 
   // One last save on the way out, so closing mid-story is not lost.
+  //
+  // The position comes from the ref rather than from `player`, and the effect
+  // deliberately does not depend on `player` at all. This cleanup runs whenever
+  // its dependencies change, not only on unmount — and `player` changes
+  // identity as soon as the narration loads and a real source replaces the
+  // empty one. React runs the old cleanup after `useAudioPlayer` has already
+  // released that old player, so reading a property off it threw from native
+  // code, past any JavaScript that could have caught it, and took the app down
+  // with it the moment the screen opened.
   useEffect(
     () => () => {
-      saveProgress(player.currentTime, false);
+      saveProgress(lastPosition.current, false);
     },
-    [player, saveProgress],
+    [saveProgress],
   );
 
   useEffect(() => {
@@ -152,28 +215,6 @@ export default function PlayerScreen() {
       ) ?? null
     );
   }, [segments, status.currentTime]);
-
-  if (isPending) {
-    return (
-      <NightScreen>
-        <LoadingState label={t('common.loading')} />
-      </NightScreen>
-    );
-  }
-
-  if (isError || !narration) {
-    return (
-      <NightScreen>
-        <ErrorState
-          title={errorCopy(null).title}
-          retryLabel={t('common.retry')}
-          onRetry={() => {
-            void refetch();
-          }}
-        />
-      </NightScreen>
-    );
-  }
 
   const duration = status.duration > 0 ? status.duration : (narration.durationSeconds ?? 0);
 
