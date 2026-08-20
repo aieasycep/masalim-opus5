@@ -41,23 +41,42 @@ jobs:
             exit 0
           fi
 
-          # Generous timeout on purpose: a cold start is exactly what this is
-          # here to absorb, so a slow answer is success, not failure. 90 s was
-          # not generous enough — GitHub's scheduler drifts, a gap stretched to
-          # 45 minutes, and waking from that deep a sleep timed out and reported
-          # the deploy as down when it was merely slow.
+          # Two attempts, because one is not evidence.
           #
-          # `|| echo` is deliberately absent: curl's own -w prints 000 when the
-          # request never completes, and appending another made the log say
-          # "HTTP 000000". `set -e` is off for this line because a non-zero curl
-          # exit is an outcome to report, not a reason to stop.
-          code=$(curl -sS -o /tmp/ready.json -w '%{http_code}' --max-time 150 \
-            "${API_URL%/}/health/ready") || true
+          # GitHub's scheduler drifts — the gap between runs has been anything
+          # from 16 to 50 minutes — while the host sleeps after 15 minutes idle.
+          # Every ping is therefore a cold start, and a cold start occasionally
+          # takes longer than any timeout worth setting. A single slow answer
+          # said "the deploy is down" twice when it was merely waking, and a
+          # warning that cries wolf is worse than none.
+          #
+          # The first attempt is what actually starts the wake-up; the second
+          # asks again once it has had time. Failing only when both fail keeps
+          # the red mark meaningful.
+          #
+          # curl's own -w prints 000 when the request never completes, so no
+          # fallback echo is needed — appending one made the log say
+          # "HTTP 000000". `|| true` is there because a non-zero curl exit is an
+          # outcome to report, not a reason to stop the script.
+          ping() {
+            curl -sS -o /tmp/ready.json -w '%{http_code}' --max-time 150 \
+              "${API_URL%/}/health/ready" || true
+          }
 
+          code=$(ping)
           echo "HTTP $code"
           cat /tmp/ready.json 2>/dev/null || true
           echo
 
-          # A failure here means the deploy is down, which is worth seeing in the
-          # Actions tab rather than swallowing.
+          if [ "$code" != "200" ]; then
+            echo "Retrying once; the first request may have been the wake-up call."
+            sleep 20
+            code=$(ping)
+            echo "HTTP $code"
+            cat /tmp/ready.json 2>/dev/null || true
+            echo
+          fi
+
+          # Two consecutive failures mean the deploy really is down, which is
+          # worth seeing in the Actions tab rather than swallowing.
           [ "$code" = "200" ]
