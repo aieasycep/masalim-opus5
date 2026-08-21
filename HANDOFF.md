@@ -137,8 +137,10 @@ Each of these cost a debugging cycle. They are not obvious from the code.
 
 ## Known gaps, in the order they matter
 
-1. **No visual verification.** Not one screen has been seen rendering. Tests and
-   typechecks say the code is correct, not that the app looks or flows right.
+1. **Barely any visual verification.** Sign-in, Home and the player have been
+   seen on a real phone; every one of those three carried a fault that types and
+   tests had passed. Sixty-odd screens have still never been looked at, and the
+   base rate so far is not encouraging.
 2. **No E2E tests.** Zero `testID` attributes across 68 screens, no Maestro
    flows. This is the prerequisite for catching regressions after deploy.
 3. **Printing is not integrated.** `PRINT_PROVIDER: z.enum(['mock'])` — unlike
