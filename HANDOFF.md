@@ -18,7 +18,7 @@ Honest completion, by the measure that matters:
 | | |
 | --- | --- |
 | Code written | ~90% |
-| Testable by a person | ~55% — database and API are deployed |
+| Testable by a person | ~70% — an APK installs and runs against the deploy |
 | Ready for real users | ~15% |
 
 ## The deploy, step by step
@@ -45,8 +45,54 @@ on its mock, so the whole product is clickable before any API key exists.
       adapter. `STORAGE_ENDPOINT` is where the API uploads; `STORAGE_PUBLIC_URL`
       is where the phone downloads. Confusing them produces stories that
       generate fine and then fail to play.
-- [ ] **4. The app.** Expo Go first — it needs no build and should work today.
-      Then EAS Build for an APK.
+- [x] **4. The app — done.** An APK is built by
+      `.github/workflows/build-apk.yml`, run by hand from the Actions tab. It
+      needs one repository secret, `EXPO_TOKEN`; the EAS project id is committed
+      in `app.config.ts` because a generated config is one EAS cannot write back
+      into. The build runs on Expo's infrastructure, which is the only route
+      available: an Android build needs `dl.google.com`, and this environment is
+      refused it.
+
+## What the first real build taught us
+
+Three faults that only a device could have found, all now fixed. They are
+recorded because each was invisible to types, tests and review.
+
+- **The launch gate opened on the session alone.** A signed-out parent landed on
+  the signed-in tabs, watching skeletons that could never load, because the
+  redirect waited for the launch-config query while the render did not. The
+  decision is now `src/lib/app-gate.ts`, tested against exactly that case.
+- **The player crashed the app on open.** Its unmount save read a property off
+  the audio player, and that effect depended on the player — whose identity
+  changes the moment a real source replaces the empty one it was created with.
+  React ran the old cleanup after the native object had been released.
+- **The Create button sat where its gap was not.** Three tabs cannot have a gap
+  in the middle; the centre falls inside the middle tab. It is a fourth slot now.
+
+Still unexplained: creating a narration showed an error screen on the device.
+The same flow, run against a local stack with the same mock providers, completes
+`4/4` and produces a playable file. Whatever it is, it is specific to the
+deploy, and Render's logs are the only place it can be seen — this environment
+cannot reach them.
+
+## The staging deploy is not reliable, and that is expected
+
+On 20 August the API returned 502 for roughly four and a half hours and then
+recovered on its own, with no deploy and no change from us. A crash loop in our
+own code does not repair itself, so this was the platform: a free instance being
+moved or an incident.
+
+Two related facts worth knowing before diagnosing anything:
+
+- `.github/workflows/keep-warm.yml` pings every ten minutes on paper. In
+  practice GitHub's scheduler drifts to anywhere between 16 and 50 minutes,
+  while the host sleeps after 15 idle — so most pings are cold starts. It asks
+  twice before reporting a failure for exactly this reason. A five-minute
+  external pinger would do the job properly.
+- The start command runs `prisma migrate deploy` before the port is bound. If a
+  migration ever fails, the service never listens and there is no HTTP surface
+  left to diagnose it with. That is a fragility worth revisiting, though it was
+  not the cause here.
 
 ## What this build environment cannot do
 
