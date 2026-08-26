@@ -1,0 +1,82 @@
+name: Keep the staging API warm
+
+# Free hosting tiers put an idle instance to sleep, and waking it takes long
+# enough that the first request after a quiet hour can exceed the mobile client's
+# 30-second timeout. The parent then sees "İnternet bağlantın yok gibi" — honest
+# copy for the wrong reason, since their connection is fine and our server was
+# asleep.
+#
+# A request every ten minutes costs seconds of Actions time and removes the
+# problem entirely. It does nothing unless the STAGING_API_URL repository
+# variable is set, so a fork or a repo without a deploy stays silent rather than
+# failing a scheduled job forever.
+#
+# Two things worth knowing: GitHub disables scheduled workflows on a repository
+# with no activity for 60 days, and this keeps a free instance's monthly hours
+# ticking. If the free allowance runs short, lengthen the interval rather than
+# deleting this — a sleeping instance is a worse first impression than a slow one.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-warm
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping readiness
+        env:
+          API_URL: ${{ vars.STAGING_API_URL }}
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "STAGING_API_URL is not set; nothing to keep warm."
+            exit 0
+          fi
+
+          # Two attempts, because one is not evidence.
+          #
+          # GitHub's scheduler drifts — the gap between runs has been anything
+          # from 16 to 50 minutes — while the host sleeps after 15 minutes idle.
+          # Every ping is therefore a cold start, and a cold start occasionally
+          # takes longer than any timeout worth setting. A single slow answer
+          # said "the deploy is down" twice when it was merely waking, and a
+          # warning that cries wolf is worse than none.
+          #
+          # The first attempt is what actually starts the wake-up; the second
+          # asks again once it has had time. Failing only when both fail keeps
+          # the red mark meaningful.
+          #
+          # curl's own -w prints 000 when the request never completes, so no
+          # fallback echo is needed — appending one made the log say
+          # "HTTP 000000". `|| true` is there because a non-zero curl exit is an
+          # outcome to report, not a reason to stop the script.
+          ping() {
+            curl -sS -o /tmp/ready.json -w '%{http_code}' --max-time 150 \
+              "${API_URL%/}/health/ready" || true
+          }
+
+          code=$(ping)
+          echo "HTTP $code"
+          cat /tmp/ready.json 2>/dev/null || true
+          echo
+
+          if [ "$code" != "200" ]; then
+            echo "Retrying once; the first request may have been the wake-up call."
+            sleep 20
+            code=$(ping)
+            echo "HTTP $code"
+            cat /tmp/ready.json 2>/dev/null || true
+            echo
+          fi
+
+          # Two consecutive failures mean the deploy really is down, which is
+          # worth seeing in the Actions tab rather than swallowing.
+          [ "$code" = "200" ]

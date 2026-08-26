@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.33.0'
+
+jobs:
+  quality:
+    name: Lint, typecheck & unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Install Chromium for the book renderer
+        run: pnpm --filter @masalim/book-render exec playwright install --with-deps chromium
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+  integration:
+    name: API integration & e2e
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: masalim
+          POSTGRES_PASSWORD: masalim
+          POSTGRES_DB: masalim_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U masalim -d masalim_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      APP_ENV: development
+      DATABASE_URL: postgresql://masalim:masalim@localhost:5432/masalim_test?schema=public
+      SHADOW_DATABASE_URL: postgresql://masalim:masalim@localhost:5432/masalim_test_shadow?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: ci-access-secret-not-used-in-production-abcdefghij
+      JWT_REFRESH_SECRET: ci-refresh-secret-not-used-in-production-abcdefghij
+      STORAGE_PROVIDER: local
+      STORAGE_BUCKET: masalim-media
+      AI_PROVIDER: mock
+      MODERATION_PROVIDER: mock
+      IMAGE_PROVIDER: mock
+      TTS_PROVIDER: mock
+      VOICE_CLONE_PROVIDER: mock
+      PAYMENT_PROVIDER: mock
+      SUBSCRIPTION_PROVIDER: mock
+      PRINT_PROVIDER: mock
+      PUSH_PROVIDER: mock
+      ANALYTICS_PROVIDER: noop
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Install Chromium for the book renderer
+        run: pnpm --filter @masalim/book-render exec playwright install --with-deps chromium
+
+      - name: Apply migrations
+        run: pnpm db:migrate:deploy
+
+      - name: Seed reference data
+        run: pnpm db:seed
+
+      - name: Integration & e2e tests
+        run: pnpm test:e2e
+
+  build:
+    name: Build all workspaces
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000
+          EXPO_PUBLIC_API_URL: http://localhost:3000

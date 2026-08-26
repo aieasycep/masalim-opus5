@@ -1,0 +1,54 @@
+{
+  "name": "masalim",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:mobile": "turbo run dev --filter=@masalim/mobile",
+    "dev:api": "turbo run dev --filter=@masalim/api",
+    "dev:admin": "turbo run dev --filter=@masalim/admin",
+    "dev:worker": "turbo run dev:worker --filter=@masalim/api",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint -- --fix",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "infra:up": "./scripts/dev-infra.sh up",
+    "infra:down": "./scripts/dev-infra.sh down",
+    "db:generate": "pnpm --filter @masalim/database generate",
+    "db:migrate": "pnpm --filter @masalim/database migrate",
+    "db:migrate:deploy": "pnpm --filter @masalim/database migrate:deploy",
+    "db:reset": "pnpm --filter @masalim/database reset",
+    "db:seed": "pnpm --filter @masalim/database seed",
+    "db:studio": "pnpm --filter @masalim/database studio",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "@sentry/cli",
+      "argon2",
+      "esbuild",
+      "ffmpeg-static",
+      "prisma",
+      "sharp"
+    ]
+  }
+}
