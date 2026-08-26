@@ -82,6 +82,20 @@ recovered on its own, with no deploy and no change from us. A crash loop in our
 own code does not repair itself, so this was the platform: a free instance being
 moved or an incident.
 
+Three shorter outages followed, each recovering on its own within the hour, and
+their shapes differ in a way worth keeping:
+
+| When | What the ping saw |
+| --- | --- |
+| 24 Aug 08:04 | `curl 56` — the connection was accepted and dropped inside a second |
+| 25 Aug 09:06 | `curl 28` — 150 seconds, twice, **zero bytes** |
+| 26 Aug 10:03 | `curl 28` — the same, again |
+
+The second shape is a process that never binds a port while the router holds the
+caller waiting. That is what bounding the migration below is aimed at. It is a
+mitigation reasoned from the signature, not a diagnosis: nobody has read Render's
+own log for these, and this environment cannot.
+
 Two related facts worth knowing before diagnosing anything:
 
 - `.github/workflows/keep-warm.yml` pings every ten minutes on paper. In
@@ -89,10 +103,12 @@ Two related facts worth knowing before diagnosing anything:
   while the host sleeps after 15 idle — so most pings are cold starts. It asks
   twice before reporting a failure for exactly this reason. A five-minute
   external pinger would do the job properly.
-- The start command runs `prisma migrate deploy` before the port is bound. If a
-  migration ever fails, the service never listens and there is no HTTP surface
-  left to diagnose it with. That is a fragility worth revisiting, though it was
-  not the cause here.
+- The start command runs `prisma migrate deploy` before the port is bound, and
+  because a free instance sleeps, it runs again on every wake. A migration that
+  hangs therefore means the port is never opened and there is no HTTP surface
+  left to diagnose it with — the caller just waits. It is now bounded at 60
+  seconds and retried once, so a slow connect is a pause and a real failure is a
+  crash Render restarts and records, rather than a silent hang.
 
 ## What this build environment cannot do
 

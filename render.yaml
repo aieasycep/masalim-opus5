@@ -70,6 +70,21 @@ services:
     # single instance, so nothing races it. `&&` is deliberate — a schema the
     # code does not expect should stop the boot, not be served around.
     #
+    # It is bounded and retried, though, because of what "before the port is
+    # bound" costs here. A free instance sleeps after 15 idle minutes, so this
+    # command runs again on every wake — every cold start pays a round trip to
+    # the database before anything can listen. On 25 and 26 August the keep-warm
+    # ping got zero bytes for two full 150-second attempts: not a refusal, not a
+    # slow answer, just nothing, which is what a caller sees while a process
+    # that never binds a port keeps the router waiting. An unbounded migration
+    # is the one step in this line that can produce exactly that, and it can
+    # produce it from a hiccup that would have cleared on a second try.
+    #
+    # 60 seconds is generous for four already-applied migrations — a healthy run
+    # is seconds — and a single retry turns one slow connect into a pause rather
+    # than an outage. Two failures still stop the boot, and a crash that Render
+    # restarts and reports is worth more than a hang it cannot see.
+    #
     # NODE_ENV is set here instead of as a service variable because pnpm reads
     # NODE_ENV=production during install and would skip the devDependencies the
     # build needs: nest, tsc, turbo and prisma all live there.
@@ -79,7 +94,9 @@ services:
     # storage driver signs media URLs against it — left at its default, every
     # image URL the app hands a phone would point at localhost.
     startCommand: >-
-      (cd packages/database && node_modules/.bin/prisma migrate deploy) &&
+      (cd packages/database &&
+      (timeout 60 node_modules/.bin/prisma migrate deploy ||
+      timeout 60 node_modules/.bin/prisma migrate deploy)) &&
       NODE_ENV=production
       API_PORT="$PORT"
       API_BASE_URL="$RENDER_EXTERNAL_URL"
