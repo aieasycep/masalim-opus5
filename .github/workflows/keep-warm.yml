@@ -6,19 +6,33 @@ name: Keep the staging API warm
 # copy for the wrong reason, since their connection is fine and our server was
 # asleep.
 #
-# A request every ten minutes costs seconds of Actions time and removes the
-# problem entirely. It does nothing unless the STAGING_API_URL repository
-# variable is set, so a fork or a repo without a deploy stays silent rather than
-# failing a scheduled job forever.
+# This ran on a schedule until 14 September and no longer does. Two reasons, and
+# the second is the real one:
 #
-# Two things worth knowing: GitHub disables scheduled workflows on a repository
-# with no activity for 60 days, and this keeps a free instance's monthly hours
-# ticking. If the free allowance runs short, lengthen the interval rather than
-# deleting this — a sleeping instance is a worse first impression than a slow one.
+# GitHub's scheduler drifted badly — the gap between runs stretched from the ten
+# minutes asked for to two hours — while the host sleeps after fifteen. So it was
+# no longer keeping anything warm; every ping was still a cold start. What it had
+# become was an uptime check.
+#
+# And an uptime check that nobody reads costs nothing, but this one was read: it
+# woke an agent session on every result, which re-read the whole conversation to
+# write one line saying the deploy was still up. Roughly 600k tokens per "no
+# change". Over three weeks that was most of what this session spent, and the
+# last two outages it reported taught us only that the fix for them was sitting
+# unmerged on a branch — nothing the notification could act on.
+#
+# It stays here because the job itself is sound and one day there will be a
+# deploy worth watching. Run it by hand from the Actions tab when you want to
+# know whether staging is up. To put it back on a schedule, restore the `schedule`
+# trigger below — and pair it with something that reads the result, because a red
+# mark nobody looks at is not monitoring.
+#
+# It does nothing unless the STAGING_API_URL repository variable is set, so a
+# fork or a repo without a deploy stays silent rather than failing forever.
 
 on:
-  schedule:
-    - cron: '*/10 * * * *'
+  # schedule:
+  #   - cron: '*/10 * * * *'
   workflow_dispatch:
 
 permissions:

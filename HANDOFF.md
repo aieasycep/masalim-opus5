@@ -98,11 +98,13 @@ own log for these, and this environment cannot.
 
 Two related facts worth knowing before diagnosing anything:
 
-- `.github/workflows/keep-warm.yml` pings every ten minutes on paper. In
-  practice GitHub's scheduler drifts to anywhere between 16 and 50 minutes,
-  while the host sleeps after 15 idle — so most pings are cold starts. It asks
-  twice before reporting a failure for exactly this reason. A five-minute
-  external pinger would do the job properly.
+- `.github/workflows/keep-warm.yml` **no longer runs on a schedule** — the
+  trigger is commented out as of 14 September, and it is now manual-only from
+  the Actions tab. It had drifted to two-hour gaps against a host that sleeps
+  after fifteen minutes, so it was never keeping anything warm; it had become an
+  uptime check that woke an agent session on every result to write one line. A
+  five-minute external pinger is still the right way to do the warming job, and
+  anything that watches uptime should report somewhere a person actually looks.
 - The start command runs `prisma migrate deploy` before the port is bound, and
   because a free instance sleeps, it runs again on every wake. A migration that
   hangs therefore means the port is never opened and there is no HTTP surface
