@@ -1,0 +1,93 @@
+/*
+ * The console wears the product's palette.
+ *
+ * Values are injected at build time from @masalim/ui/tokens/colors by
+ * app/theme.ts rather than copied here — the tokens file is the single place a
+ * hex literal is allowed to live, and duplicating it would let the operator
+ * console and the app drift apart shade by shade.
+ *
+ * Only the light palette is used. Night mode exists in the app because a parent
+ * reads in a dark room; an operator at a desk does not need it, and offering a
+ * half-tested second theme here would be maintenance without a reader.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Never remove the ring outright: this is a keyboard-driven console. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/* A wide table scrolls inside its own container rather than the page. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+th {
+  text-align: start;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

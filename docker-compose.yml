@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: masalim-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: masalim
+      POSTGRES_PASSWORD: masalim
+      POSTGRES_DB: masalim
+      # Turkish collation matters for ORDER BY on story titles (ı/İ, ç, ğ, ö, ş, ü).
+      POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=tr-TR --encoding=UTF8'
+    ports:
+      - '5432:5432'
+    volumes:
+      - masalim-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U masalim -d masalim']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: masalim-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - masalim-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # S3-compatible storage for local development. Production uses Cloudflare R2
+  # with the identical adapter — only the endpoint and credentials change.
+  minio:
+    image: minio/minio:latest
+    container_name: masalim-minio
+    restart: unless-stopped
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: masalim
+      MINIO_ROOT_PASSWORD: masalim-dev-secret
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - masalim-minio-data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 masalim masalim-dev-secret &&
+      mc mb --ignore-existing local/masalim-media &&
+      mc anonymous set download local/masalim-media/public &&
+      echo 'MinIO bucket ready'
+      "
+
+volumes:
+  masalim-postgres-data:
+  masalim-redis-data:
+  masalim-minio-data:

@@ -1,0 +1,94 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".env"],
+
+  // Turborepo runs tasks in a filtered environment: anything not declared here
+  // is simply absent from the child process. Undeclared variables do not warn —
+  // they silently vanish, which showed up as Prisma reporting DATABASE_URL as
+  // missing even though it was exported. These are also the inputs that should
+  // invalidate a cached test result when they change.
+  "globalEnv": [
+    "NODE_ENV",
+    "APP_ENV",
+    "CI",
+    "LOG_LEVEL",
+
+    "DATABASE_URL",
+    "SHADOW_DATABASE_URL",
+    "TEST_DATABASE_URL",
+    "REDIS_URL",
+    "TEST_REDIS_URL",
+
+    "API_*",
+    "CORS_ORIGINS",
+    "JWT_*",
+    "STORAGE_*",
+    "SIGNED_URL_TTL_SECONDS",
+
+    "AI_PROVIDER",
+    "MODERATION_PROVIDER",
+    "MODERATION_MODEL",
+    "IMAGE_PROVIDER",
+    "IMAGE_MODEL",
+    "IMAGE_USE_REFERENCE_IMAGES",
+    "TTS_PROVIDER",
+    "VOICE_CLONE_PROVIDER",
+    "VOICE_RAW_RETENTION_DAYS",
+    "PAYMENT_PROVIDER",
+    "SUBSCRIPTION_PROVIDER",
+    "PRINT_PROVIDER",
+    "PUSH_PROVIDER",
+    "ANALYTICS_PROVIDER",
+
+    "ANTHROPIC_*",
+    "OPENAI_*",
+    "ELEVENLABS_*",
+    "IYZICO_*",
+    "REVENUECAT_*",
+    "POSTHOG_*",
+    "APPLE_*",
+    "GOOGLE_*",
+    "EXPO_*",
+    "NEXT_PUBLIC_*",
+    "ADMIN_*",
+    "SENTRY_DSN",
+    "CHROMIUM_EXECUTABLE_PATH",
+    "PLAYWRIGHT_BROWSERS_PATH",
+
+    "MASALIM_*"
+  ],
+
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "build/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "dev:worker": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    // No `outputs`: none of these suites emit coverage, and declaring a directory
+    // that never appears makes turbo warn about missing output on every run —
+    // noise that trains you to skim past the warnings that do matter.
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

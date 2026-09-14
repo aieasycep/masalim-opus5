@@ -1,0 +1,4 @@
+{
+  "extends": "@masalim/config/tsconfig/react-native.json",
+  "include": ["src/**/*"]
+}

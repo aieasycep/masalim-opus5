@@ -1,0 +1,1294 @@
+// Masalım — data model
+//
+// Conventions used throughout:
+//   * Ids are cuid() so they are unguessable in URLs and safe in logs.
+//   * `deletedAt` marks a soft delete; a Prisma client extension filters those
+//     rows out globally, and hard deletion runs through DeletionRequest jobs.
+//   * Money is Decimal(12,2) and never a float.
+//   * Every private entity carries an explicit userId so ownership can be
+//     checked in one place (PolicyService) rather than per controller.
+//   * Enum values mirror @masalim/types exactly; a compile-time assertion in
+//     src/enum-parity.ts fails the build if they ever drift.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+  /// Pinned rather than inferred. Prisma ships a native query engine per libc
+  /// and OpenSSL combination, and a client generated on one and run on another
+  /// fails at the first query — the container image is Debian bookworm, so that
+  /// target is named explicitly instead of depending on where `generate` ran.
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+// ============================================================== Enums
+
+enum Locale {
+  tr
+  en
+}
+
+enum AuthProvider {
+  EMAIL
+  APPLE
+  GOOGLE
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  NONE
+  TRIALING
+  ACTIVE
+  IN_GRACE_PERIOD
+  PAUSED
+  EXPIRED
+  CANCELLED
+}
+
+enum SubscriptionStore {
+  APP_STORE
+  PLAY_STORE
+  PROMOTIONAL
+  MOCK
+}
+
+enum AgeRange {
+  AGE_0_2
+  AGE_3_5
+  AGE_6_8
+  AGE_9_12
+}
+
+enum StoryDuration {
+  SHORT
+  MEDIUM
+  LONG
+}
+
+enum HeroType {
+  CHILD
+  ANIMAL
+  FANTASY
+  ROBOT
+  CUSTOM
+}
+
+enum StoryStatus {
+  DRAFT
+  GENERATING
+  READY
+  FAILED
+  REJECTED
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
+enum ModerationStage {
+  INPUT
+  OUTPUT
+}
+
+enum VoiceOwnerType {
+  MOTHER
+  FATHER
+  GRANDMOTHER
+  GRANDFATHER
+  OTHER
+}
+
+enum VoiceProfileStatus {
+  AWAITING_RECORDING
+  UPLOADED
+  PROCESSING
+  READY
+  FAILED
+  DELETING
+}
+
+enum SystemVoiceCategory {
+  CALM
+  CHEERFUL
+  FAIRYTALE
+  ENERGETIC
+}
+
+enum NarrationStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum IllustrationStyle {
+  watercolor
+  soft3d
+  classic_storybook
+  pastel
+  hand_drawn
+}
+
+enum IllustrationKind {
+  COVER
+  PAGE
+  BACK_COVER
+}
+
+enum GenerationStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum BookStatus {
+  DRAFT
+  READY
+  ORDERED
+}
+
+enum BookPageLayout {
+  IMAGE_TOP_TEXT_BOTTOM
+  IMAGE_FULL_TEXT_OVERLAY
+  TEXT_ONLY
+  IMAGE_ONLY
+}
+
+enum BookRenderKind {
+  DIGITAL_PREVIEW
+  PRINT_PDF
+}
+
+enum BookSize {
+  SQUARE
+  STANDARD
+}
+
+enum CoverType {
+  HARDCOVER
+  SOFTCOVER
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  IN_PRODUCTION
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum Currency {
+  TRY
+  USD
+  EUR
+}
+
+enum AIJobType {
+  STORY_GENERATION
+  VOICE_CLONE
+  NARRATION_GENERATION
+  ILLUSTRATION_GENERATION
+  BOOK_RENDER
+  PRINT_FILE_GENERATION
+}
+
+enum AIJobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AssetKind {
+  VOICE_RECORDING
+  VOICE_PREVIEW
+  NARRATION_AUDIO
+  ILLUSTRATION
+  BOOK_PREVIEW
+  PRINT_PDF
+  CHILD_AVATAR
+  USER_AVATAR
+}
+
+enum AssetVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum NotificationType {
+  STORY_READY
+  STORY_FAILED
+  VOICE_READY
+  VOICE_FAILED
+  ILLUSTRATIONS_READY
+  BOOK_READY
+  ORDER_CONFIRMED
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  SUBSCRIPTION_RENEWED
+  SUBSCRIPTION_EXPIRED
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+}
+
+enum AdminRole {
+  ADMIN
+  SUPPORT
+  OPERATIONS
+}
+
+enum ActorType {
+  USER
+  ADMIN
+  SYSTEM
+}
+
+enum DeletionRequestType {
+  ACCOUNT
+  VOICE_PROFILE
+}
+
+enum DeletionRequestStatus {
+  SCHEDULED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ============================================================== Identity
+
+model User {
+  id                  String             @id @default(cuid())
+  email               String             @unique
+  /// Null for social-only accounts; argon2id when set.
+  passwordHash        String?
+  name                String?
+  avatarAssetId       String?            @unique
+  locale              Locale             @default(tr)
+  timezone            String             @default("Europe/Istanbul")
+  onboardingCompleted Boolean            @default(false)
+  subscriptionTier    SubscriptionTier   @default(FREE)
+  subscriptionStatus  SubscriptionStatus @default(NONE)
+  termsAcceptedAt     DateTime?
+  lastSeenAt          DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  deletedAt           DateTime?
+
+  avatar            Asset?                  @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  identities        AuthIdentity[]
+  refreshTokens     RefreshToken[]
+  passwordResets    PasswordResetToken[]
+  children          Child[]
+  voiceProfiles     VoiceProfile[]
+  voiceConsents     VoiceConsent[]
+  stories           Story[]
+  books             Book[]
+  orders            Order[]
+  addresses         Address[]
+  subscription      Subscription?
+  favourites        Favourite[]
+  storyProgress     StoryProgress[]
+  notifications     Notification[]
+  deviceTokens      DeviceToken[]
+  aiJobs            AIJob[]
+  aiUsage           AIUsageLog[]
+  usageCounters     UsageCounter[]
+  assets            Asset[]                 @relation("AssetOwner")
+  deletionRequests  DeletionRequest[]
+  notificationPrefs NotificationPreference?
+  audioPrefs        AudioPreference?
+  privacyPrefs      PrivacyPreference?
+
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model AuthIdentity {
+  id                String       @id @default(cuid())
+  userId            String
+  provider          AuthProvider
+  /// `sub` from Apple/Google, or the lowercased email for password accounts.
+  providerAccountId String
+  email             String?
+  createdAt         DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("auth_identities")
+}
+
+/// Rotating refresh tokens. Reuse of a rotated token revokes the whole family,
+/// which is how a stolen token is detected and neutralised.
+model RefreshToken {
+  id           String    @id @default(cuid())
+  userId       String
+  tokenHash    String    @unique
+  familyId     String
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?   @unique
+  userAgent    String?
+  ipHash       String?
+  createdAt    DateTime  @default(now())
+
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBy RefreshToken? @relation("TokenRotation", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces   RefreshToken? @relation("TokenRotation")
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ============================================================== Children
+
+model Interest {
+  id        String  @id @default(cuid())
+  slug      String  @unique
+  /// Localisation key, e.g. `interest.dinosaurs`.
+  labelKey  String
+  emoji     String
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  children ChildInterest[]
+
+  @@map("interests")
+}
+
+model Child {
+  id              String    @id @default(cuid())
+  userId          String
+  name            String
+  birthDate       DateTime? @db.Date
+  ageRange        AgeRange
+  avatarAssetId   String?
+  /// Free-text interests the parent added via "Kendim ekle".
+  customInterests String[]  @default([])
+  /// Small preference bag: how to address the child, favourite colour, ...
+  preferences     Json      @default("{}")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatar    Asset?          @relation("ChildAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  interests ChildInterest[]
+  stories   Story[]
+
+  @@index([userId, deletedAt])
+  @@map("children")
+}
+
+model ChildInterest {
+  childId    String
+  interestId String
+
+  child    Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  interest Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  @@id([childId, interestId])
+  @@index([interestId])
+  @@map("child_interests")
+}
+
+// ============================================================== Voice
+
+model VoiceProfile {
+  id                  String             @id @default(cuid())
+  userId              String
+  ownerType           VoiceOwnerType
+  displayName         String
+  /// Which adapter created the clone, so deletion targets the right provider.
+  provider            String
+  providerVoiceId     String?
+  originalAssetId     String?
+  previewAssetId      String?
+  status              VoiceProfileStatus @default(AWAITING_RECORDING)
+  /// Consent is mandatory before cloning and is enforced server-side.
+  consentAcceptedAt   DateTime?
+  consentVersion      String?
+  consentIpHash       String?
+  /// When the raw recording should be purged after a successful clone.
+  rawRetentionUntil   DateTime?
+  processingErrorCode String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  deletedAt           DateTime?
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  original   Asset?      @relation("VoiceOriginal", fields: [originalAssetId], references: [id], onDelete: SetNull)
+  preview    Asset?      @relation("VoicePreview", fields: [previewAssetId], references: [id], onDelete: SetNull)
+  narrations Narration[]
+
+  @@index([userId, deletedAt])
+  @@index([status])
+  @@map("voice_profiles")
+}
+
+/// The parent's explicit permission to clone a voice.
+///
+/// Kept apart from VoiceProfile on purpose. It is recorded on the consent screen,
+/// *before* any profile exists, and it has to outlive the profile: deleting the
+/// clone must not erase the record that the recording was ever authorised. The
+/// server refuses to create or clone a voice without a live row here, so the
+/// checkbox in the app is a courtesy rather than the gate (master prompt §21).
+model VoiceConsent {
+  id         String    @id @default(cuid())
+  userId     String
+  /// The exact wording the parent agreed to, so a later revision is auditable.
+  version    String
+  acceptedAt DateTime  @default(now())
+  /// Salted hash. Enough to show the acceptance came from a real session,
+  /// without keeping a log of where a family lives.
+  ipHash     String?
+  userAgent  String?
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, version, revokedAt])
+  @@map("voice_consents")
+}
+
+/// Curated system narrators. Managed from the admin panel; the provider's
+/// technical voice id is never exposed to clients.
+model SystemVoice {
+  id              String              @id @default(cuid())
+  slug            String              @unique
+  displayName     String
+  descriptionKey  String
+  category        SystemVoiceCategory
+  provider        String
+  providerVoiceId String
+  previewAssetId  String?
+  /// Internal only, used to pick a sensible default narrator.
+  presentation    String?
+  locale          Locale              @default(tr)
+  enabled         Boolean             @default(true)
+  premiumOnly     Boolean             @default(false)
+  sortOrder       Int                 @default(0)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  preview    Asset?      @relation("SystemVoicePreview", fields: [previewAssetId], references: [id], onDelete: SetNull)
+  narrations Narration[]
+
+  @@index([enabled, sortOrder])
+  @@map("system_voices")
+}
+
+// ============================================================== Stories
+
+model Story {
+  id               String           @id @default(cuid())
+  userId           String
+  childId          String?
+  title            String
+  summary          String?
+  heroName         String
+  heroType         HeroType
+  themes           String[]         @default([])
+  ageRange         AgeRange
+  durationTarget   StoryDuration
+  customPrompt     String?
+  advancedSettings Json             @default("{}")
+  language         Locale           @default(tr)
+  storyText        String?
+  status           StoryStatus      @default(DRAFT)
+  moderationStatus ModerationStatus @default(PENDING)
+  moderationReason String?
+  /// Bumped whenever the parent edits the text, so orders can pin a version.
+  version          Int              @default(1)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  child            Child?            @relation(fields: [childId], references: [id], onDelete: SetNull)
+  pages            StoryPage[]
+  versions         StoryVersion[]
+  narrations       Narration[]
+  illustrationSets IllustrationSet[]
+  books            Book[]
+  favourites       Favourite[]
+  progress         StoryProgress[]
+
+  @@index([userId, deletedAt, createdAt])
+  @@index([childId])
+  @@index([status])
+  @@map("stories")
+}
+
+model StoryPage {
+  id                 String   @id @default(cuid())
+  storyId            String
+  pageNumber         Int
+  text               String
+  illustrationPrompt String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  story         Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  illustrations Illustration[]
+  bookPages     BookPage[]
+
+  @@unique([storyId, pageNumber])
+  @@map("story_pages")
+}
+
+/// Immutable snapshot of the story text at a point in time. A book ordered
+/// against version 3 keeps rendering version 3 even after later edits (§80).
+model StoryVersion {
+  id        String   @id @default(cuid())
+  storyId   String
+  version   Int
+  title     String
+  /// [{ pageNumber, text }]
+  pages     Json
+  createdAt DateTime @default(now())
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, version])
+  @@map("story_versions")
+}
+
+/// One story can carry many narrations — system voice first, mother's voice
+/// later. The story text is never regenerated for a new narration.
+model Narration {
+  id              String          @id @default(cuid())
+  storyId         String
+  voiceProfileId  String?
+  systemVoiceId   String?
+  provider        String
+  audioAssetId    String?
+  durationSeconds Int?
+  /// Sentence-level offsets that drive text highlighting during playback.
+  segments        Json?
+  status          NarrationStatus @default(PENDING)
+  errorCode       String?
+  idempotencyKey  String?         @unique
+  storyVersion    Int             @default(1)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  story        Story           @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  voiceProfile VoiceProfile?   @relation(fields: [voiceProfileId], references: [id], onDelete: SetNull)
+  systemVoice  SystemVoice?    @relation(fields: [systemVoiceId], references: [id], onDelete: SetNull)
+  audio        Asset?          @relation("NarrationAudio", fields: [audioAssetId], references: [id], onDelete: SetNull)
+  progress     StoryProgress[]
+
+  @@index([storyId, status])
+  @@map("narrations")
+}
+
+// ========================================================= Illustrations
+
+model IllustrationSet {
+  id             String            @id @default(cuid())
+  storyId        String
+  style          IllustrationStyle
+  /// The CharacterBible reused for every page prompt so the hero stays
+  /// recognisable across the whole book (§27).
+  characterBible Json?
+  status         GenerationStatus  @default(PENDING)
+  storyVersion   Int               @default(1)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  story         Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  illustrations Illustration[]
+  books         Book[]
+
+  @@index([storyId])
+  @@map("illustration_sets")
+}
+
+model Illustration {
+  id                String           @id @default(cuid())
+  illustrationSetId String
+  storyPageId       String?
+  kind              IllustrationKind
+  variantIndex      Int              @default(0)
+  assetId           String?
+  prompt            String
+  seed              String?
+  status            GenerationStatus @default(PENDING)
+  isSelected        Boolean          @default(true)
+  errorCode         String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  illustrationSet IllustrationSet @relation(fields: [illustrationSetId], references: [id], onDelete: Cascade)
+  storyPage       StoryPage?      @relation(fields: [storyPageId], references: [id], onDelete: SetNull)
+  asset           Asset?          @relation("IllustrationAsset", fields: [assetId], references: [id], onDelete: SetNull)
+  bookPages       BookPage[]
+  bookCovers      Book[]          @relation("BookCover")
+
+  @@index([illustrationSetId, kind])
+  @@index([storyPageId])
+  @@map("illustrations")
+}
+
+// =============================================================== Books
+
+model Book {
+  id                  String     @id @default(cuid())
+  userId              String
+  storyId             String
+  illustrationSetId   String?
+  title               String
+  subtitle            String?
+  dedication          String?
+  backCoverText       String?
+  coverIllustrationId String?
+  status              BookStatus @default(DRAFT)
+  storyVersion        Int        @default(1)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  deletedAt           DateTime?
+
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story             Story            @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  illustrationSet   IllustrationSet? @relation(fields: [illustrationSetId], references: [id], onDelete: SetNull)
+  coverIllustration Illustration?    @relation("BookCover", fields: [coverIllustrationId], references: [id], onDelete: SetNull)
+  pages             BookPage[]
+  renders           BookRender[]
+  orders            Order[]
+
+  @@index([userId, deletedAt])
+  @@index([storyId])
+  @@map("books")
+}
+
+model BookPage {
+  id             String         @id @default(cuid())
+  bookId         String
+  pageNumber     Int
+  storyPageId    String?
+  illustrationId String?
+  text           String
+  layout         BookPageLayout @default(IMAGE_TOP_TEXT_BOTTOM)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  book         Book          @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  storyPage    StoryPage?    @relation(fields: [storyPageId], references: [id], onDelete: SetNull)
+  illustration Illustration? @relation(fields: [illustrationId], references: [id], onDelete: SetNull)
+
+  @@unique([bookId, pageNumber])
+  @@map("book_pages")
+}
+
+model BookRender {
+  id        String           @id @default(cuid())
+  bookId    String
+  kind      BookRenderKind
+  assetId   String?
+  checksum  String?
+  status    GenerationStatus @default(PENDING)
+  errorCode String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  book  Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  asset Asset? @relation("BookRenderAsset", fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([bookId, kind])
+  @@map("book_renders")
+}
+
+// ==================================================== Commerce & pricing
+
+model Address {
+  id          String    @id @default(cuid())
+  userId      String
+  fullName    String
+  phone       String
+  line1       String
+  line2       String?
+  /// İlçe
+  district    String
+  /// İl
+  city        String
+  postalCode  String
+  countryCode String    @default("TR")
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([userId, deletedAt])
+  @@map("addresses")
+}
+
+/// Print catalogue. Prices live here so the backend — never the client —
+/// decides what a book costs (§82).
+model PrintProduct {
+  id             String    @id @default(cuid())
+  sku            String    @unique
+  bookSize       BookSize
+  coverType      CoverType
+  displayNameKey String
+  basePrice      Decimal   @db.Decimal(12, 2)
+  /// Charged per page beyond `includedPages`.
+  perPagePrice   Decimal   @default(0) @db.Decimal(12, 2)
+  includedPages  Int       @default(12)
+  minPages       Int       @default(4)
+  maxPages       Int       @default(24)
+  currency       Currency  @default(TRY)
+  productionDays Int       @default(3)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  orders Order[]
+
+  @@unique([bookSize, coverType])
+  @@map("print_products")
+}
+
+model ShippingRate {
+  id                String   @id @default(cuid())
+  countryCode       String   @default("TR")
+  /// Null matches every city; a specific city overrides the default.
+  city              String?
+  price             Decimal  @db.Decimal(12, 2)
+  /// Orders at or above this subtotal ship free.
+  freeAboveSubtotal Decimal? @db.Decimal(12, 2)
+  currency          Currency @default(TRY)
+  minDeliveryDays   Int      @default(2)
+  maxDeliveryDays   Int      @default(5)
+  isActive          Boolean  @default(true)
+
+  @@unique([countryCode, city])
+  @@map("shipping_rates")
+}
+
+model Order {
+  id                   String        @id @default(cuid())
+  userId               String
+  bookId               String
+  printProductId       String
+  orderNumber          String        @unique
+  quantity             Int
+  bookSize             BookSize
+  coverType            CoverType
+  pageCount            Int
+  subtotal             Decimal       @db.Decimal(12, 2)
+  discount             Decimal       @default(0) @db.Decimal(12, 2)
+  shipping             Decimal       @default(0) @db.Decimal(12, 2)
+  total                Decimal       @db.Decimal(12, 2)
+  currency             Currency      @default(TRY)
+  status               OrderStatus   @default(PENDING_PAYMENT)
+  paymentStatus        PaymentStatus @default(PENDING)
+  shippingAddressId    String?
+  /// Frozen copies taken when the order is placed. Editing the book afterwards
+  /// cannot change what was ordered (§81).
+  bookSnapshot         Json
+  addressSnapshot      Json
+  storyVersion         Int
+  trackingNumber       String?
+  printProviderOrderId String?
+  idempotencyKey       String        @unique
+  estimatedDeliveryMin Int
+  estimatedDeliveryMax Int
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book            Book         @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  printProduct    PrintProduct @relation(fields: [printProductId], references: [id], onDelete: Restrict)
+  shippingAddress Address?     @relation(fields: [shippingAddressId], references: [id], onDelete: SetNull)
+  payments        Payment[]
+  events          OrderEvent[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  type      String
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_events")
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  provider          String
+  providerPaymentId String?
+  amount            Decimal       @db.Decimal(12, 2)
+  currency          Currency      @default(TRY)
+  status            PaymentStatus @default(PENDING)
+  /// Provider response with card data and secrets already stripped (§47).
+  redactedPayload   Json?
+  errorCode         String?
+  idempotencyKey    String        @unique
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+// ========================================================= Subscription
+
+model Subscription {
+  id                    String             @id @default(cuid())
+  userId                String             @unique
+  provider              String
+  store                 SubscriptionStore  @default(MOCK)
+  productId             String?
+  entitlement           String             @default("premium")
+  status                SubscriptionStatus @default(NONE)
+  originalTransactionId String?
+  startedAt             DateTime?
+  expiresAt             DateTime?
+  trialEndsAt           DateTime?
+  willRenew             Boolean            @default(false)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events SubscriptionEvent[]
+
+  @@index([status, expiresAt])
+  @@map("subscriptions")
+}
+
+model SubscriptionEvent {
+  id              String   @id @default(cuid())
+  subscriptionId  String
+  type            String
+  /// Store webhook payload, secrets removed.
+  payload         Json     @default("{}")
+  /// Provider event id, so a replayed webhook is ignored.
+  providerEventId String?  @unique
+  createdAt       DateTime @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, createdAt])
+  @@map("subscription_events")
+}
+
+/// Per-user, per-month counters backing the entitlement quotas.
+model UsageCounter {
+  id          String   @id @default(cuid())
+  userId      String
+  feature     String
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  used        Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feature, periodStart])
+  @@map("usage_counters")
+}
+
+// ================================================ Engagement & delivery
+
+model Favourite {
+  userId    String
+  storyId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, storyId])
+  @@index([storyId])
+  @@map("favourites")
+}
+
+/// Drives the Home screen's "Kaldığın yerden devam et" card.
+model StoryProgress {
+  id              String   @id @default(cuid())
+  userId          String
+  storyId         String
+  narrationId     String
+  positionSeconds Int      @default(0)
+  completed       Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story     Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  narration Narration @relation(fields: [narrationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId])
+  @@index([userId, updatedAt])
+  @@map("story_progress")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  titleKey  String
+  bodyKey   String
+  /// Interpolation values plus the deep link target.
+  data      Json             @default("{}")
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model DeviceToken {
+  id         String         @id @default(cuid())
+  userId     String
+  token      String         @unique
+  platform   DevicePlatform
+  appVersion String?
+  locale     Locale         @default(tr)
+  lastSeenAt DateTime       @default(now())
+  disabledAt DateTime?
+  createdAt  DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, disabledAt])
+  @@map("device_tokens")
+}
+
+model NotificationPreference {
+  userId             String   @id
+  storyReady         Boolean  @default(true)
+  voiceReady         Boolean  @default(true)
+  illustrationsReady Boolean  @default(true)
+  orderUpdates       Boolean  @default(true)
+  productNews        Boolean  @default(false)
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+/// Analytics is opt-in and off until a parent says otherwise, which is what
+/// the Analytics client already assumes — it drops events rather than queueing
+/// them, so consent granted later never retroactively ships what someone did
+/// before they agreed.
+///
+/// `decidedAt` separates "has not been asked" from "was asked and declined".
+/// Without it the app cannot tell a parent it should still prompt from one it
+/// must leave alone, and would end up asking a declining parent forever.
+model PrivacyPreference {
+  userId           String    @id
+  analyticsConsent Boolean   @default(false)
+  decidedAt        DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("privacy_preferences")
+}
+
+model AudioPreference {
+  userId                   String   @id
+  defaultPlaybackRate      Decimal  @default(1.0) @db.Decimal(3, 1)
+  autoPlayNext             Boolean  @default(false)
+  defaultSleepTimerMinutes Int?
+  updatedAt                DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("audio_preferences")
+}
+
+// ================================================== Jobs & AI bookkeeping
+
+model AIJob {
+  id             String      @id @default(cuid())
+  userId         String
+  type           AIJobType
+  entityType     String?
+  entityId       String?
+  status         AIJobStatus @default(QUEUED)
+  /// 0–100, derived from completed pipeline steps — never a fabricated value.
+  progress       Int         @default(0)
+  currentStepKey String?
+  completedSteps Int         @default(0)
+  totalSteps     Int         @default(1)
+  attempts       Int         @default(0)
+  maxAttempts    Int         @default(3)
+  errorCode      String?
+  errorMessage   String?
+  queueJobId     String?
+  idempotencyKey String      @unique
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usage AIUsageLog[]
+
+  @@index([userId, createdAt])
+  @@index([status, type])
+  @@index([entityType, entityId])
+  @@map("ai_jobs")
+}
+
+/// One row per provider call, so AI spend can be attributed and capped (§85).
+model AIUsageLog {
+  id                  String   @id @default(cuid())
+  userId              String
+  jobId               String?
+  provider            String
+  model               String
+  operation           String
+  success             Boolean
+  inputTokens         Int?
+  outputTokens        Int?
+  characters          Int?
+  imageCount          Int?
+  audioSeconds        Int?
+  /// Estimated cost in millionths of a currency unit, to stay integer-exact.
+  estimatedCostMicros BigInt?
+  latencyMs           Int?
+  createdAt           DateTime @default(now())
+
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  AIJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([provider, createdAt])
+  @@map("ai_usage_logs")
+}
+
+model ModerationRecord {
+  id          String           @id @default(cuid())
+  subjectType String
+  subjectId   String
+  stage       ModerationStage
+  provider    String
+  verdict     ModerationStatus
+  /// Category scores from the provider; used for tuning, never shown to users.
+  categories  Json             @default("{}")
+  reasonCode  String?
+  createdAt   DateTime         @default(now())
+
+  /// Human review of an automated refusal. The classifier only ever writes
+  /// APPROVED or REJECTED, so the operator queue is the appeal path for its
+  /// false positives: a REJECTED record with no reviewedAt is a parent's story
+  /// currently blocked by a machine and waiting for a person to look (§34).
+  reviewedAt        DateTime?
+  reviewedByAdminId String?
+  reviewOutcome     ModerationStatus?
+  reviewNote        String?
+
+  reviewedBy AdminUser? @relation(fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([subjectType, subjectId])
+  @@index([verdict, createdAt])
+  @@index([reviewedAt, verdict])
+  @@map("moderation_records")
+}
+
+// ============================================================== Assets
+
+/// Central registry for every stored object. Ownership lives here, which is
+/// what makes signed-URL access checks a single lookup (§30, §83).
+model Asset {
+  id          String          @id @default(cuid())
+  userId      String?
+  kind        AssetKind
+  bucket      String
+  key         String          @unique
+  contentType String
+  sizeBytes   Int?
+  checksum    String?
+  visibility  AssetVisibility @default(PRIVATE)
+  /// Set once the client confirms the signed upload completed.
+  uploadedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  deletedAt   DateTime?
+
+  owner                User?          @relation("AssetOwner", fields: [userId], references: [id], onDelete: Cascade)
+  userAvatarOf         User?          @relation("UserAvatar")
+  childAvatarOf        Child[]        @relation("ChildAvatar")
+  voiceOriginalOf      VoiceProfile[] @relation("VoiceOriginal")
+  voicePreviewOf       VoiceProfile[] @relation("VoicePreview")
+  systemVoicePreviewOf SystemVoice[]  @relation("SystemVoicePreview")
+  narrationAudioOf     Narration[]    @relation("NarrationAudio")
+  illustrationOf       Illustration[] @relation("IllustrationAsset")
+  bookRenderOf         BookRender[]   @relation("BookRenderAsset")
+
+  @@index([userId, kind])
+  @@index([deletedAt])
+  @@map("assets")
+}
+
+// ============================================================= Platform
+
+model FeatureFlag {
+  key               String   @id
+  enabled           Boolean  @default(false)
+  rolloutPercentage Int      @default(100)
+  payload           Json     @default("{}")
+  description       String?
+  updatedByAdminId  String?
+  updatedAt         DateTime @updatedAt
+
+  updatedBy AdminUser? @relation(fields: [updatedByAdminId], references: [id], onDelete: SetNull)
+
+  @@map("feature_flags")
+}
+
+/// Admin accounts are entirely separate from end-user accounts (§42).
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         AdminRole @default(SUPPORT)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  featureFlags      FeatureFlag[]
+  auditLogs         AuditLog[]
+  moderationReviews ModerationRecord[]
+
+  @@map("admin_users")
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  actorType   ActorType
+  actorId     String?
+  adminUserId String?
+  action      String
+  subjectType String?
+  subjectId   String?
+  metadata    Json      @default("{}")
+  ipHash      String?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorType, actorId, createdAt])
+  @@index([subjectType, subjectId])
+  @@map("audit_logs")
+}
+
+/// Deletion runs as a background job with visible status, so "Sesimi Sil" and
+/// "Hesabımı Sil" are real operations rather than a flag flip (§84).
+model DeletionRequest {
+  id           String                @id @default(cuid())
+  userId       String
+  type         DeletionRequestType
+  subjectId    String?
+  status       DeletionRequestStatus @default(SCHEDULED)
+  scheduledFor DateTime
+  completedAt  DateTime?
+  errorMessage String?
+  reason       String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([status, scheduledFor])
+  @@map("deletion_requests")
+}
+
+model AppVersionPolicy {
+  id                  String         @id @default(cuid())
+  platform            DevicePlatform @unique
+  minSupportedVersion String
+  latestVersion       String
+  forceUpdate         Boolean        @default(false)
+  messageKey          String?
+  updatedAt           DateTime       @updatedAt
+
+  @@map("app_version_policies")
+}
+
+/// Stores the response of a completed idempotent request so a retry returns the
+/// original result instead of creating a second order or narration (§59).
+model IdempotencyRecord {
+  key         String   @id
+  userId      String?
+  endpoint    String
+  requestHash String
+  statusCode  Int
+  response    Json
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+  @@map("idempotency_records")
+}

@@ -1,0 +1,158 @@
+# Masalım — a deployable stack.
+#
+# Enough to put the API somewhere a phone can reach it. Not a production
+# architecture: Postgres and Redis run as containers with local volumes, which
+# is fine for a staging box and wrong for anything carrying real families' data,
+# where both should be managed services with backups you have restored at least
+# once.
+#
+# Usage:
+#   cp .env.deploy.example .env.deploy   # then fill it in
+#   docker compose -f docker-compose.prod.yml --env-file .env.deploy up -d
+#
+# The API refuses to boot without the secrets marked required in that file, so a
+# half-configured deploy fails immediately rather than at the first sign-up.
+
+name: masalim
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-masalim}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-masalim}
+      # Turkish collation, so ORDER BY on story titles gets ı/İ, ç, ğ, ö, ş, ü right.
+      POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=tr-TR --encoding=UTF8'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-masalim} -d ${POSTGRES_DB:-masalim}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    # Not published to the host: only the app containers need it, and a database
+    # on a public port is how a staging box becomes an incident.
+    expose:
+      - '5432'
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    expose:
+      - '6379'
+
+  # S3-compatible storage. Swap STORAGE_* for Cloudflare R2 or AWS and drop this
+  # service; the adapter is the same, only endpoint and credentials change.
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY:?STORAGE_ACCESS_KEY is required}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY:?STORAGE_SECRET_KEY is required}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    expose:
+      - '9000'
+    ports:
+      # Signed media URLs are handed to the phone, so this one does need to be
+      # reachable from outside. Put it behind the same TLS terminator as the API.
+      - '${MINIO_PORT:-9000}:9000'
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
+      mc mb --ignore-existing local/${STORAGE_BUCKET:-masalim-media} &&
+      mc anonymous set download local/${STORAGE_BUCKET:-masalim-media}/public &&
+      echo 'bucket ready'
+      "
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY}
+
+  # Runs to completion before the app starts. Separate from the API so two
+  # replicas cannot race the same migration, and so a schema failure reads as a
+  # schema failure rather than as a crash-looping application.
+  migrate:
+    build:
+      context: .
+      target: migrate
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    env_file: [.env.deploy]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - '${API_PORT:-3000}:3000'
+
+  worker:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    env_file: [.env.deploy]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Chromium wants more than the default 64MB of shared memory to render a
+    # twelve-page book; without this the render fails on a large page.
+    shm_size: '1gb'
+
+  admin:
+    build:
+      context: .
+      target: admin
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Server-to-server inside the compose network, so this never leaves the box.
+      ADMIN_API_URL: http://api:3000
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - '${ADMIN_PORT:-3001}:3001'
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
